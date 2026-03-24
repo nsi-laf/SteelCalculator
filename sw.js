@@ -1,8 +1,11 @@
-const CACHE_NAME = 'qm-store-v4.5';
+const CACHE_NAME = 'qm-store-v5.2';
 const ASSETS = [
     './',
     './index.html',
     './styles.css',
+    './lang.js',
+    './data.js',
+    './engine.js',
     './app.js',
     './manifest.json'
 ];
@@ -33,10 +36,7 @@ self.addEventListener('fetch', (e) => {
                     cache.put(e.request, networkResponse.clone());
                 });
                 return networkResponse;
-            }).catch(() => {
-                // Ignore network errors (user is offline)
-            });
-            
+            }).catch(() => { /* offline fallback */ });
             return cachedResponse || fetchPromise;
         })
     );
