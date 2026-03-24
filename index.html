@@ -3,78 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quartermaster Command: Steel Logistics v5.0</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f0f12">
-</head>
-<body class="dark-theme">
-
-<div class="dashboard">
-    <div class="sidebar">
-        <div class="module">
-            <div class="module-header" id="ui_interface">Interface & Sync</div>
-            <button class="btn-theme" onclick="app.toggleTheme()">☀️ / 🌙 Toggle Theme</button>
-            <div class="input-row">
-                <select id="mode" onchange="app.handleModeChange()" style="width: 100%; margin-bottom: 5px;">
-                    <option value="units">Units</option>
-                    <option value="stacks">Stacks (10k)</option>
-                </select>
-            </div>
-            <div class="input-row" style="gap: 5px;">
-                <button class="btn-stack" onclick="app.exportState()" style="width: 50%;">Export Guild Data</button>
-                <button class="btn-stack" onclick="app.importState()" style="width: 50%; background: var(--text-dim);">Import</button>
-            </div>
-        </div>
-
-        <div class="module">
-            <div class="module-header" id="ui_prodCmd">Production Command</div>
-            <div class="input-row">
-                <label>Target Steel</label>
-                <div style="display:flex; gap: 5px;">
-                    <input type="number" id="targetSteel" value="7000" oninput="app.run()">
-                    <button class="btn-stack" onclick="app.calculateMax()" style="min-width: auto;">⚡ Max</button>
-                </div>
-            </div>
-            <div class="input-row"><label>Crafters</label><input type="number" id="crafters" value="1" oninput="app.run()"></div>
-        </div>
-
-        <div class="module">
-            <div class="module-header" id="ui_yieldMods">Yield Modifiers</div>
-            <div class="input-row"><label>Mastery (+6%)</label><input type="checkbox" id="modMast" onchange="app.run()" checked></div>
-            <div class="input-row"><label>Refining (+3%)</label><input type="checkbox" id="modRef" onchange="app.run()" checked></div>
-            <div class="input-row"><label>Extraction (+3%)</label><input type="checkbox" id="modExt" onchange="app.run()" checked></div>
-        </div>
-
-        <div class="module">
-            <div class="module-header" id="ui_logStats">Logistics Stats</div>
-            <div class="input-row"><span>Total Gather Stacks:</span> <span id="statStacks" class="stat-val">0.00</span></div>
-        </div>
+    <title>Quartermaster Steel Logistics Suite v3.0</title>
+    <style>
+        :root {
+            --bg-main: #141417; --bg-container: #1e1e24; --text-main: #f5f5f5;
+            --accent: #d4af37; --accent-hover: #f1c40f; --border-color: #3a3a48;
+            --bg-input: #141417; --bg-box: #2b2b36; --bg-step: #25252d;
+            --bg-cost: #2a2a1e; --text-dim: #a9a9b3; --success: #4CAF50;
+            --warning: #ff9800; --danger: #ff4d4d; --shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .light-theme {
+            --bg-main: #f0f2f5; --bg-container: #ffffff; --text-main: #333333;
+            --accent: #b5952f; --border-color: #cccccc; --bg-input: #f9f9f9;
+            --bg-box: #e9ecef; --bg-step: #f8f9fa; --bg-cost: #fff8e1;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-main); color: var(--text-main); padding: 40px 20px; transition: all 0.3s ease; }
+        .container { max-width: 950px; width: 100%; background-color: var(--bg-container); padding: 30px; border-radius: 12px; box-shadow: var(--shadow); position: relative; margin: auto; }
         
-        <button class="btn-stack" onclick="app.copyDiscord()" style="width:100%; padding:12px; font-size:13px;">📋 Copy Discord Order</button>
-        <div id="saveStatus" style="text-align:center; margin-top:10px; font-size:11px; color:var(--text-dim);">System Ready</div>
+        h1, h2 { color: var(--accent); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+        
+        /* Interactive Elements */
+        .input-wrapper, .step-card, .summary-col, .header-btn, .header-select {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+        }
+        .input-wrapper:hover, .step-card:hover, .summary-col:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
+        }
+        .header-btn:active { transform: scale(0.95); }
+
+        .controls { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .input-wrapper { background: var(--bg-input); border: 2px solid var(--accent); border-radius: 8px; overflow: hidden; display: flex; align-items: center; }
+        .input-wrapper input { font-size: 1.5em; padding: 10px; width: 160px; text-align: center; background: transparent; color: var(--text-main); border: none; outline: none; }
+        
+        .header-btn, .header-select { background: var(--accent); color: #1e1e24; border: none; padding: 10px 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+
+        .inventory-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; background: var(--bg-step); padding: 20px; border-radius: 10px; margin-bottom: 25px; }
+        .intermediate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; background: var(--bg-step); padding: 20px; border-radius: 10px; margin-bottom: 25px; }
+        
+        .inv-cell input { width: 90%; padding: 8px; text-align: center; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--accent); border-radius: 4px; font-size: 1.1em; }
+        
+        .summary-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: var(--bg-box); padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .def-val { font-size: 1.6em; font-weight: bold; display: block; margin-bottom: 4px; }
+        
+        .status-none { color: var(--text-dim); opacity: 0.3; }
+        .status-minor { color: var(--warning); text-shadow: 0 0 10px rgba(255, 152, 0, 0.3); }
+        .status-major { color: var(--danger); text-shadow: 0 0 10px rgba(255, 77, 77, 0.3); }
+
+        .step-card { background: var(--bg-step); padding: 18px; margin-bottom: 12px; border-left: 5px solid var(--accent); border-radius: 6px; font-size: 1.1em; }
+        .bonus-toggles { display: flex; justify-content: space-around; background: var(--bg-cost); padding: 15px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid var(--accent); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <select id="langSelect" class="header-select" onchange="changeLang()">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="de">Deutsch</option>
+        </select>
+        <button class="header-btn" onclick="toggleTheme(); playTick();">☀️/🌙</button>
     </div>
 
-    <div class="main">
-        <div class="module">
-            <div class="module-header"><span>Inventory Bank</span> <button class="btn-stack btn-danger" onclick="app.clearAll()">Reset All Values</button></div>
-            <table class="bank-table" id="bankTable"></table>
-        </div>
+    <h1 id="ui-title">Steel Logistics Suite</h1>
 
-        <div class="module">
-            <div class="module-header" id="ui_defGather">Deficit to Gather</div>
-            <div id="gatherOutput" class="logistics-grid"></div>
+    <div class="controls">
+        <div class="input-group">
+            <label id="ui-target">Target Steel:</label>
+            <div style="display: flex; gap: 8px;">
+                <div class="input-wrapper"><input type="number" id="steelInput" value="7000" oninput="calculate(); playTick();"></div>
+                <button class="header-btn" onclick="runMax(); playClink();" id="ui-max">⚡ Max</button>
+            </div>
         </div>
+        <div class="input-group">
+            <label id="ui-format">Format:</label>
+            <select id="displayMode" class="header-select" onchange="handleModeChange(); playTick();">
+                <option value="units">Units</option>
+                <option value="stacks">Stacks (10k)</option>
+            </select>
+        </div>
+    </div>
 
-        <div class="module">
-            <div class="module-header" id="ui_mfgPipe">Manufacturing Pipeline</div>
-            <div id="stepsOutput"></div>
-        </div>
+    <div class="bonus-toggles">
+        <label><input type="checkbox" id="chkMastery" onchange="calculate(); playTick();"> <span id="ui-mastery">Mastery (+6%)</span></label>
+        <label><input type="checkbox" id="chkExtract" onchange="calculate(); playTick();"> <span id="ui-extract">Extract (+3%)</span></label>
+        <label><input type="checkbox" id="chkRefine" onchange="calculate(); playTick();"> <span id="ui-refine">Refine (+3%)</span></label>
+    </div>
+
+    <h2 id="ui-bank">Bank & Market</h2>
+    <div class="inventory-grid" id="rawInputs"></div>
+    <div class="intermediate-grid" id="intInputs"></div>
+
+    <h2 id="ui-deficit">Logistics Deficits</h2>
+    <div class="summary-box" id="summaryBox"></div>
+    <div id="stepList"></div>
+
+    <div class="controls" style="margin-top: 30px;">
+        <button class="header-btn" onclick="copyDiscord(); playClink();">📋 Discord</button>
+        <button class="header-btn" style="background:#444; color:white;" onclick="clearBank(); playTick();" id="ui-clear">🧹 Clear</button>
     </div>
 </div>
 
-<script src="config.js"></script>
-<script src="engine.js"></script>
-<script src="app.js"></script>
+<script>
+    // AUDIO ENGINE
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTick() {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+    function playClink() {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square'; osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    const i18n = {
+        en: { title: "Steel Logistics Suite", target: "Target Steel:", format: "Format:", max: "⚡ Max", mastery: "Mastery (+6%)", extract: "Extract (+3%)", refine: "Refine (+3%)", bank: "Bank & Market", deficit: "Logistics Deficits", clear: "🧹 Clear", grind: "Grind", crush: "Crush", attractor: "Attractor", furnace: "Furnace", oven: "Oven", yields: "Yields" },
+        fr: { title: "Suite Logistique d'Acier", target: "Objectif Acier:", format: "Format:", max: "⚡ Max", mastery: "Maîtrise (+6%)", extract: "Extract (+3%)", refine: "Raffine (+3%)", bank: "Banque & Marché", deficit: "Déficits Logistiques", clear: "🧹 Vider", grind: "Broyer", crush: "Concasser", attractor: "Attracteur", furnace: "Fourneau", oven: "Four", yields: "Produit" }
+        // Add ES, PT, DE similarly
+    };
+
+    const rawIds = ['Granum', 'Calx', 'Saburra', 'Water'];
+    const intIds = ['SabPowder', 'CalxPowder', 'Coal', 'Coke', 'PigIron', 'GrainSteel'];
+
+    function init() {
+        const rawDiv = document.getElementById('rawInputs');
+        rawDiv.innerHTML = `<div style="font-weight:bold">Material</div><div style="font-weight:bold">Price</div><div style="font-weight:bold">Bank</div>`;
+        rawIds.forEach(id => {
+            rawDiv.innerHTML += `<div>${id}</div><div class="inv-cell"><input type="number" id="p${id}" value="${id==='Water'?1:15}"></div><div class="inv-cell"><input type="number" id="b${id}" value="0" oninput="calculate(); save();"></div>`;
+        });
+        const intDiv = document.getElementById('intInputs');
+        intIds.forEach(id => {
+            intDiv.innerHTML += `<div>${id}<br><input type="number" id="b${id}" value="0" oninput="calculate(); save();" style="width:80%"></div>`;
+        });
+        load(); calculate();
+    }
+
+    function changeLang() {
+        const l = document.getElementById('langSelect').value;
+        const t = i18n[l] || i18n.en;
+        document.getElementById('ui-title').innerText = t.title;
+        document.getElementById('ui-target').innerText = t.target;
+        document.getElementById('ui-format').innerText = t.format;
+        document.getElementById('ui-max').innerText = t.max;
+        document.getElementById('ui-mastery').innerText = t.mastery;
+        document.getElementById('ui-extract').innerText = t.extract;
+        document.getElementById('ui-refine').innerText = t.refine;
+        document.getElementById('ui-bank').innerText = t.bank;
+        document.getElementById('ui-deficit').innerText = t.deficit;
+        document.getElementById('ui-clear').innerText = t.clear;
+        calculate();
+    }
+
+    function calculate() {
+        const m = document.getElementById('displayMode').value === 'stacks' ? 10000 : 1;
+        const target = (Number(document.getElementById('steelInput').value) || 0) * m;
+        const mExt = document.getElementById('chkExtract').checked ? 1.03 : 1;
+        const mRef = document.getElementById('chkRefine').checked ? 1.03 : 1;
+        const mMast = document.getElementById('chkMastery').checked ? 1.06 : 1;
+
+        const getB = (id) => (Number(document.getElementById('b'+id).value) || 0) * m;
+
+        // Pipeline
+        const reqGS = Math.ceil(target / (0.7 * mRef));
+        const craftGS = Math.max(0, reqGS - getB('GrainSteel'));
+        const reqPI = Math.ceil(craftGS / (0.7 * mRef));
+        const craftPI = Math.max(0, reqPI - getB('PigIron'));
+        const reqBO = Math.ceil(craftPI / (0.4 * mRef));
+        const reqGra = Math.ceil(reqBO / (0.198 * mExt * mMast));
+
+        const cokeN = Math.ceil(craftGS * 0.5) + Math.ceil(reqBO * 0.0385);
+        const craftCoke = Math.max(0, cokeN - getB('Coke'));
+        const coalN = Math.ceil(reqGS * 0.5) + Math.ceil(craftCoke / (0.72 * mRef));
+        const craftCoal = Math.max(0, coalN - getB('Coal'));
+
+        const cpN = Math.ceil(reqGra * 0.0715) + Math.ceil((craftCoke/(0.72*mRef))*0.0715) + Math.ceil(reqPI * 0.5);
+        const craftCP = Math.max(0, cpN - getB('CalxPowder'));
+        const spN = Math.ceil(reqGS * 0.5);
+        const craftSP = Math.max(0, spN - getB('SabPowder'));
+
+        const reqSab = Math.ceil(craftSP / (0.4275 * mExt));
+        const calxG = Math.ceil(craftCP / (0.2058 * mExt));
+        const calxC = Math.ceil(Math.max(0, craftCoal - Math.ceil(calxG * 0.1140 * mExt)) / (0.2160 * mExt));
+
+        const defs = {
+            Granum: Math.max(0, reqGra - getB('Granum')),
+            Calx: Math.max(0, (calxG + calxC) - getB('Calx')),
+            Saburra: Math.max(0, reqSab - getB('Saburra')),
+            Water: Math.max(0, (Math.ceil((reqSab + calxG) * 0.1)) - getB('Water'))
+        };
+
+        // Render Summary
+        let sumHtml = '';
+        Object.keys(defs).forEach(k => {
+            const d = defs[k];
+            const s = d <= 0 ? 'status-none' : (d < 10000 ? 'status-minor' : 'status-major');
+            const fmt = m === 10000 ? (d/10000).toFixed(2) + ' Stk' : d.toLocaleString();
+            sumHtml += `<div class="summary-col"><span class="def-val ${s}">${fmt}</span><small>${k}</small></div>`;
+        });
+        document.getElementById('summaryBox').innerHTML = sumHtml;
+
+        // Render Steps
+        const lang = document.getElementById('langSelect').value;
+        const t = i18n[lang] || i18n.en;
+        let steps = [];
+        if (craftSP > 0) steps.push(`${t.grind}: Saburra + Water -> ${craftSP.toLocaleString()} Saburra Powder`);
+        if (calxG > 0) steps.push(`${t.grind}: Calx + Water -> ${craftCP.toLocaleString()} Calx Powder`);
+        if (calxC > 0) steps.push(`${t.crush}: Calx -> Coal`);
+        if (reqBO > 0) steps.push(`${t.attractor}: Granum + Calx Powder -> ${reqBO.toLocaleString()} Blood Ore`);
+        if (craftCoke > 0) steps.push(`${t.furnace}: Coal + Calx Powder -> ${craftCoke.toLocaleString()} Coke`);
+        if (craftPI > 0) steps.push(`${t.furnace}: Blood Ore + Coke -> ${craftPI.toLocaleString()} Pig Iron`);
+        if (craftGS > 0) steps.push(`${t.oven}: Pig Iron + Coke + Calx Powder -> ${craftGS.toLocaleString()} Grain Steel`);
+        if (target > 0) steps.push(`${t.oven}: Grain Steel + Coal + Saburra Powder -> ${target.toLocaleString()} Steel`);
+        
+        document.getElementById('stepList').innerHTML = steps.map((s, i) => `<div class="step-card"><strong>${i+1}.</strong> ${s}</div>`).join('');
+    }
+
+    function runMax() {
+        let low = 0, high = 1000000, best = 0;
+        while(low <= high) {
+            let mid = low + Math.floor((high - low) / 2);
+            if (getCalculationsForMax(mid * 10).defGranum <= 0) { best = mid * 10; low = mid + 1; }
+            else high = mid - 1;
+        }
+        document.getElementById('steelInput').value = document.getElementById('displayMode').value === 'stacks' ? (best/10000) : best;
+        calculate();
+    }
+
+    function getCalculationsForMax(target) {
+        const m = document.getElementById('displayMode').value === 'stacks' ? 10000 : 1;
+        const mExt = document.getElementById('chkExtract').checked ? 1.03 : 1;
+        const mRef = document.getElementById('chkRefine').checked ? 1.03 : 1;
+        const mMast = document.getElementById('chkMastery').checked ? 1.06 : 1;
+        const getB = (id) => (Number(document.getElementById('b'+id).value) || 0) * m;
+
+        const reqGS = Math.ceil(target / (0.7 * mRef));
+        const craftGS = Math.max(0, reqGS - getB('GrainSteel'));
+        const reqPI = Math.ceil(craftGS / (0.7 * mRef));
+        const craftPI = Math.max(0, reqPI - getB('PigIron'));
+        const reqBO = Math.ceil(craftPI / (0.4 * mRef));
+        const reqGra = Math.ceil(reqBO / (0.198 * mExt * mMast));
+        return { defGranum: reqGra - getB('Granum') };
+    }
+
+    function handleModeChange() {
+        const mode = document.getElementById('displayMode').value;
+        const mult = (mode === 'stacks') ? 0.0001 : 10000;
+        ['steelInput', ...rawIds.map(i=>'b'+i), ...intIds.map(i=>'b'+i)].forEach(id => {
+            let el = document.getElementById(id);
+            el.value = parseFloat((el.value * mult).toFixed(4));
+        });
+        calculate();
+    }
+    function save() { const d = {}; document.querySelectorAll('input, select').forEach(i => d[i.id] = i.value); localStorage.setItem('mo2_v3', JSON.stringify(d)); }
+    function load() { const s = localStorage.getItem('mo2_v3'); if(s) { const d = JSON.parse(s); Object.keys(d).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = d[id]; }); } }
+    function clearBank() { document.querySelectorAll('[id^="b"]').forEach(i => i.value = 0); calculate(); save(); }
+    function toggleTheme() { document.body.classList.toggle('light-theme'); }
+    function copyDiscord() {
+        const msg = `**⚔️ Logistics Order ⚔️**\nTarget: ${document.getElementById('steelInput').value}\n\n` + document.getElementById('stepList').innerText;
+        navigator.clipboard.writeText(msg);
+    }
+    init();
+</script>
 </body>
 </html>
