@@ -63,7 +63,7 @@
                     <option value="de">🇩🇪 Deutsch</option>
                 </select>
             </div>
-            <button class="btn-theme" id="ui_themeToggle" onclick="toggleTheme()">☀️ / 🌙 Toggle Day/Night Mode</button>
+            <button class="btn-theme" id="ui_themeToggle" onclick="toggleTheme()">☀️ / 🌙 Day/Night Mode</button>
             <div class="input-row"><label id="ui_format">Display Format</label>
                 <select id="mode" onchange="handleModeChange()">
                     <option value="units" id="ui_optUnits">Units</option>
@@ -130,7 +130,8 @@
             items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Water", sp: "Saburra Pwdr", cp: "Calx Pwdr", coal: "Coal", coke: "Coke", pi: "Pig Iron", gs: "Grain Steel", steel: "Steel", bo: "Blood Ore" },
             stepGrind: "Grind", stepCrush: "Crush", stepAttract: "Attract", stepFurnace: "Furnace", stepOven: "Oven", stepFinal: "Final Oven:",
             stepTo: "to", stepYields: "yields", stepPlus: "+", perCrafter: "(Per Crafter)",
-            resetPrompt: "Reset everything to zero?", discHeader: "⚔️ LOGISTICS ORDER: STEEL ⚔️", discLoad: "Total Stacks:", discReq: "REQUIRED MATERIALS:", discStock: "All materials in stock.", discCopied: "Copied to clipboard!"
+            resetPrompt: "Reset everything to zero?", discHeader: "⚔️ LOGISTICS ORDER: STEEL ⚔️", discLoad: "Total Stacks:", discReq: "REQUIRED MATERIALS:", discStock: "All materials in stock.", discCopied: "Copied to clipboard!",
+            qAdd: "+10k", qAddStk: "+1 Stk"
         },
         fr: {
             interface: "Interface", themeToggle: "☀️ / 🌙 Mode Jour/Nuit", format: "Format d'affichage", optUnits: "Unités", optStacks: "Stacks (10k)",
@@ -139,10 +140,11 @@
             logStats: "Statistiques Logistiques", totalStacksLabel: "Stacks Totaux à Récolter :", btnDiscord: "📋 Copier pour Discord",
             invBank: "Banque d'Inventaire", btnReset: "Réinitialiser", defGather: "Déficit à Récolter", mfgPipe: "Processus de Fabrication",
             noTarget: "Aucun objectif défini.", allCovered: "✅ La banque couvre toutes les matières premières !",
-            items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Eau", sp: "Poudre Saburra", cp: "Poudre Calx", coal: "Charbon", coke: "Coke", pi: "Fonte (Pig Iron)", gs: "Acier Brut (Grain Steel)", steel: "Acier", bo: "Minerai de Sang" },
+            items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Eau", sp: "Poudre Saburra", cp: "Poudre Calx", coal: "Charbon", coke: "Coke", pi: "Fonte", gs: "Acier Brut", steel: "Acier", bo: "Minerai de Sang" },
             stepGrind: "Broyer", stepCrush: "Concasser", stepAttract: "Attirer", stepFurnace: "Fourneau", stepOven: "Four", stepFinal: "Fourneau Final:",
             stepTo: "en", stepYields: "produit", stepPlus: "+", perCrafter: "(Par Artisan)",
-            resetPrompt: "Tout remettre à zéro ?", discHeader: "⚔️ ORDRE LOGISTIQUE : ACIER ⚔️", discLoad: "Stacks Totaux :", discReq: "MATÉRIAUX REQUIS :", discStock: "Tous les matériaux sont en stock.", discCopied: "Copié dans le presse-papiers !"
+            resetPrompt: "Tout remettre à zéro ?", discHeader: "⚔️ ORDRE LOGISTIQUE : ACIER ⚔️", discLoad: "Stacks Totaux :", discReq: "MATÉRIAUX REQUIS :", discStock: "Tous les matériaux sont en stock.", discCopied: "Copié dans le presse-papiers !",
+            qAdd: "+10k", qAddStk: "+1 Stk"
         },
         es: {
             interface: "Interfaz", themeToggle: "☀️ / 🌙 Modo Día/Noche", format: "Formato de visualización", optUnits: "Unidades", optStacks: "Stacks (10k)",
@@ -154,7 +156,8 @@
             items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Agua", sp: "Polvo Saburra", cp: "Polvo Calx", coal: "Carbón", coke: "Coque", pi: "Arrabio", gs: "Acero Grano", steel: "Acero", bo: "Mineral de Sangre" },
             stepGrind: "Moler", stepCrush: "Triturar", stepAttract: "Atraer", stepFurnace: "Horno", stepOven: "Horno Ref.", stepFinal: "Horno Final:",
             stepTo: "a", stepYields: "produce", stepPlus: "+", perCrafter: "(Por Artesano)",
-            resetPrompt: "¿Restablecer todo a cero?", discHeader: "⚔️ ORDEN LOGÍSTICA: ACERO ⚔️", discLoad: "Stacks Totales:", discReq: "MATERIALES REQUERIDOS:", discStock: "Todos los materiales en stock.", discCopied: "¡Copiado al portapapeles!"
+            resetPrompt: "¿Restablecer todo a cero?", discHeader: "⚔️ ORDEN LOGÍSTICA: ACERO ⚔️", discLoad: "Stacks Totales:", discReq: "MATERIALES REQUERIDOS:", discStock: "Todos los materiales en stock.", discCopied: "¡Copiado al portapapeles!",
+            qAdd: "+10k", qAddStk: "+1 Stk"
         },
         pt: {
             interface: "Interface", themeToggle: "☀️ / 🌙 Modo Dia/Noite", format: "Formato de Exibição", optUnits: "Unidades", optStacks: "Stacks (10k)",
@@ -166,7 +169,8 @@
             items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Água", sp: "Pó de Sab.", cp: "Pó de Calx", coal: "Carvão", coke: "Coque", pi: "Ferro-Gusa", gs: "Aço Grão", steel: "Aço", bo: "Minério de Sangue" },
             stepGrind: "Moer", stepCrush: "Triturar", stepAttract: "Atrair", stepFurnace: "Fornalha", stepOven: "Forno", stepFinal: "Forno Final:",
             stepTo: "para", stepYields: "produz", stepPlus: "+", perCrafter: "(Por Artesão)",
-            resetPrompt: "Zerar tudo?", discHeader: "⚔️ ORDEM LOGÍSTICA: AÇO ⚔️", discLoad: "Stacks Totais:", discReq: "MATERIAIS NECESSÁRIOS:", discStock: "Todos os materiais em estoque.", discCopied: "Copiado!"
+            resetPrompt: "Zerar tudo?", discHeader: "⚔️ ORDEM LOGÍSTICA: AÇO ⚔️", discLoad: "Stacks Totais:", discReq: "MATERIAIS NECESSÁRIOS:", discStock: "Todos os materiais em estoque.", discCopied: "Copiado!",
+            qAdd: "+10k", qAddStk: "+1 Stk"
         },
         de: {
             interface: "Schnittstelle", themeToggle: "☀️ / 🌙 Tag/Nacht-Modus", format: "Anzeigeformat", optUnits: "Einheiten", optStacks: "Stacks (10k)",
@@ -178,7 +182,8 @@
             items: { granum: "Granum", calx: "Calx", saburra: "Saburra", water: "Wasser", sp: "Saburra-Pulver", cp: "Calx-Pulver", coal: "Kohle", coke: "Koks", pi: "Roheisen", gs: "Kornstahl", steel: "Stahl", bo: "Bluterz" },
             stepGrind: "Mahlen", stepCrush: "Zerkleinern", stepAttract: "Anziehen", stepFurnace: "Ofen", stepOven: "Raffinierofen", stepFinal: "Letzter Ofen:",
             stepTo: "zu", stepYields: "ergibt", stepPlus: "+", perCrafter: "(Pro Handwerker)",
-            resetPrompt: "Alles auf null setzen?", discHeader: "⚔️ LOGISTIK-AUFTRAG: STAHL ⚔️", discLoad: "Gesamte Stacks:", discReq: "BENÖTIGTE MATERIALIEN:", discStock: "Alle Materialien auf Lager.", discCopied: "Kopiert!"
+            resetPrompt: "Alles auf null setzen?", discHeader: "⚔️ LOGISTIK-AUFTRAG: STAHL ⚔️", discLoad: "Gesamte Stacks:", discReq: "BENÖTIGTE MATERIALIEN:", discStock: "Alle Materialien auf Lager.", discCopied: "Kopiert!",
+            qAdd: "+10k", qAddStk: "+1 Stk"
         }
     };
 
@@ -211,6 +216,7 @@
         document.getElementById('ui_invBank').innerText = t.invBank;
         document.getElementById('ui_btnReset').innerText = t.btnReset;
         document.getElementById('ui_defGather').innerText = t.defGather;
+        document.getElementById('ui_mfgPipe').innerText = t.mfgPipe;
         
         renderBankTable();
         updateButtonLabels();
@@ -220,6 +226,8 @@
     function renderBankTable() {
         const table = document.getElementById('bankTable');
         const t = i18n[currentLang];
+        const mode = document.getElementById('mode').value;
+        const label = mode === 'stacks' ? t.qAddStk : t.qAdd;
         
         const currentVals = {};
         itemKeys.forEach(k => {
@@ -234,7 +242,7 @@
                 <td style="font-weight:bold">${t.items[k]}</td>
                 <td style="text-align:right">
                     <input type="number" id="b_${k}" value="${val}" oninput="run()">
-                    <button class="btn-stack q-add" id="btn_${k}" onclick="quickAdd('b_${k}', 10000)">+10k</button>
+                    <button class="btn-stack q-add" id="btn_${k}" onclick="quickAdd('b_${k}')">${label}</button>
                 </td>
             </tr>`;
         });
@@ -253,11 +261,12 @@
 
     function updateButtonLabels() {
         const mode = document.getElementById('mode').value;
-        const label = mode === 'stacks' ? '+1 Stk' : '+10k';
+        const t = i18n[currentLang];
+        const label = mode === 'stacks' ? t.qAddStk : t.qAdd;
         document.querySelectorAll('.q-add').forEach(btn => btn.innerText = label);
     }
 
-    function quickAdd(id, amt) {
+    function quickAdd(id) {
         const el = document.getElementById(id);
         const mode = document.getElementById('mode').value;
         let current = Number(el.value) || 0;
@@ -273,11 +282,6 @@
                 if(el) el.value = 0;
             });
             document.getElementById('targetSteel').value = 0;
-            
-            // Explicitly wipe the visual elements to ensure UI feedback
-            document.getElementById('gatherOutput').innerHTML = `<div class="empty-msg">${t.noTarget}</div>`;
-            document.getElementById('stepsOutput').innerHTML = "";
-            document.getElementById('statStacks').innerText = "0.00";
             run();
         }
     }
@@ -380,22 +384,15 @@
         const bank = {}; itemKeys.forEach(k => bank[k] = getB(k));
 
         let low = 0, high = 1000000 * mult, maxPossible = 0;
-        
         while(low <= high) {
             let mid = Math.floor((low + high) / 2);
             let res = runEngine(mid / mult, bank, mode);
-            
-            // If the deficit for all RAW materials is <= 0, we can make it with current bank
             if (res.granum <= 0 && res.calx <= 0 && res.saburra <= 0 && res.water <= 0) {
-                maxPossible = mid;
-                low = mid + 1;
-            } else {
-                high = mid - 1;
-            }
+                maxPossible = mid; low = mid + 1;
+            } else high = mid - 1;
         }
-        
         document.getElementById('targetSteel').value = mode === 'stacks' ? parseFloat((maxPossible / 10000).toFixed(4)) : maxPossible;
-        run(); // Instantly update UI pipeline with the new Max Target
+        run();
     }
 
     function calculate() {
@@ -412,9 +409,7 @@
             document.getElementById('gatherOutput').innerHTML = `<div class="empty-msg">${t.noTarget}</div>`;
             document.getElementById('stepsOutput').innerHTML = "";
             document.getElementById('statStacks').innerText = "0.00";
-            document.getElementById('ui_mfgPipe').innerHTML = t.mfgPipe;
-            save();
-            return;
+            save(); return;
         }
 
         const res = runEngine(targetRaw, bank, mode);
@@ -438,13 +433,11 @@
         const totalStacks = (totalUnits / 10000).toFixed(2);
         document.getElementById('statStacks').innerText = totalStacks;
 
-        const crafterTag = crafters > 1 ? ` <span style="color:var(--warning); font-size:0.8em; margin-left:10px;">${t.perCrafter}</span>` : "";
-        document.getElementById('ui_mfgPipe').innerHTML = t.mfgPipe + crafterTag;
-
-        // Detailed Steps Reconstruction
         const s = (v) => Math.ceil(v / crafters).toLocaleString();
         let steps = [];
-        if (res.rSaburra > 0) steps.push(`${t.stepGrind} <span class="highlight">${s(res.rSaburra)} ${t.items.saburra}</span> ${t.stepPlus} <span class="highlight">${s(res.waterForSaburra)} ${t.items.water}</span> ${t.stepYields} <span class="highlight">${s(res.diffSP)} ${t.items.sp}</span>`);
+        const perCr = crafters > 1 ? ` <span style="color:var(--warning); font-size:0.8em;">${t.perCrafter}</span>` : "";
+
+        if (res.rSaburra > 0) steps.push(`${t.stepGrind} <span class="highlight">${s(res.rSaburra)} ${t.items.saburra}</span> ${t.stepPlus} <span class="highlight">${s(res.waterForSaburra)} ${t.items.water}</span> ${t.stepTo} ${t.items.sp}`);
         if (res.calxToGrind > 0) steps.push(`${t.stepGrind} <span class="highlight">${s(res.calxToGrind)} ${t.items.calx}</span> ${t.stepPlus} <span class="highlight">${s(res.waterForCalx)} ${t.items.water}</span> ${t.stepYields} <span class="highlight">${s(res.diffCP)} ${t.items.cp}</span> ${t.stepPlus} <span class="highlight">${s(res.coalFromGrind)} ${t.items.coal}</span>`);
         if (res.calxToCrush > 0) steps.push(`${t.stepCrush} <span class="highlight">${s(res.calxToCrush)} ${t.items.calx}</span> ${t.stepYields} <span class="highlight">${s(res.extraCoal)} ${t.items.coal}</span>`);
         if (res.rGranum > 0) steps.push(`${t.stepAttract}: <span class="highlight">${s(res.rGranum)} ${t.items.granum}</span> ${t.stepPlus} <span class="highlight">${s(res.cpForBlood)} ${t.items.cp}</span> ${t.stepYields} <span class="highlight">${s(res.rBlood)} ${t.items.bo}</span>`);
@@ -453,7 +446,7 @@
         if (res.diffGS > 0) steps.push(`${t.stepOven}: <span class="highlight">${s(res.diffPI)} ${t.items.pi}</span> ${t.stepPlus} <span class="highlight">${s(res.cokeForGS)} ${t.items.coke}</span> ${t.stepPlus} <span class="highlight">${s(res.cpForGS)} ${t.items.cp}</span> ${t.stepYields} <span class="highlight">${s(res.diffGS)} ${t.items.gs}</span>`);
         steps.push(`${t.stepFinal} <span class="highlight">${s(res.reqGS)} ${t.items.gs}</span> ${t.stepPlus} <span class="highlight">${s(res.coalForSteel)} ${t.items.coal}</span> ${t.stepPlus} <span class="highlight">${s(res.spForSteel)} ${t.items.sp}</span> ${t.stepYields} <span class="highlight">${(targetRaw * mult).toLocaleString()} ${t.items.steel}</span>`);
         
-        document.getElementById('stepsOutput').innerHTML = steps.map(text => `<div class="step-card">${text}</div>`).join('');
+        document.getElementById('stepsOutput').innerHTML = steps.map(text => `<div class="step-card">${text}${perCr}</div>`).join('');
         save();
     }
 
