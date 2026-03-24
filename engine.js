@@ -1,4 +1,3 @@
-// Determines the "Primary Backbone" of a metal (e.g., Oghmium -> Tungsteel -> Grain Steel -> Pig Iron -> Blood Ore -> Granum)
 function getPrimaryChain(targetMetal) {
     let chain = [targetMetal];
     let current = targetMetal;
@@ -10,7 +9,7 @@ function getPrimaryChain(targetMetal) {
             else if (rec.type === 'refine') current = rec.ore;
             else current = null;
         } else if (EXTRACT_MAP[current]) {
-            current = EXTRACT_MAP[current][0]; // Granum, Saburra, Tephra, Calx are always mapped first
+            current = EXTRACT_MAP[current][0]; 
         } else {
             current = null;
         }
@@ -19,14 +18,17 @@ function getPrimaryChain(targetMetal) {
     return chain;
 }
 
-// Determines exactly which items are strictly REQUIRED for the target metal (Hides byproducts!)
-function getRelevantItems(targetMetal) {
+function getRelevantItems(targetMetal, activePrefs = new Set()) {
     let relevant = new Set([targetMetal]);
     let queue = [targetMetal];
     
     while(queue.length > 0) {
         let item = queue.shift();
         let rec = RECIPES[item];
+        
+        if (item === 'messing' && activePrefs.has('bor')) {
+            rec = { type: 'alloy', primary: 'cuprum', cat1: 'bor', cat2: 'sp' };
+        }
         
         if (rec) {
             let deps = [];
@@ -36,7 +38,6 @@ function getRelevantItems(targetMetal) {
             deps.forEach(d => { if (d && !relevant.has(d)) { relevant.add(d); queue.push(d); } });
         }
         
-        // Only trace backward through required base extractions
         if (EXTRACT_MAP[item]) {
             EXTRACT_MAP[item].forEach(d => { if (d && !relevant.has(d)) { relevant.add(d); queue.push(d); } });
         }
@@ -45,11 +46,28 @@ function getRelevantItems(targetMetal) {
     return relevant;
 }
 
-function resolveTree(targetMetal, amount, bankData, mR) {
+// Strict Wording Helper for Generating Pipeline Steps
+function makeExtStr(actionKey, qty, item, yields, catQty = 0, catItem = null) {
+    const t = i18n[currentLang];
+    let action = t[actionKey] || actionKey;
+    
+    // "which yields" for furnace, "yields" for everything else
+    let yieldWord = (actionKey === 'stepFurnace' || actionKey === 'stepBlastFurnace') ? t.stepWhichYields : t.stepYields;
+    
+    let resStr = `<span class="highlight">${qty.toLocaleString()} ${t.items[item]||item}</span>`;
+    if (catQty > 0 && catItem) {
+        resStr += ` ${t.stepAnd} <span class="highlight">${catQty.toLocaleString()} ${t.items[catItem]||catItem}</span>`;
+    }
+    
+    let yStr = yields.map(y => `<span class="highlight">${y.amount.toLocaleString()} ${t.items[y.item]||y.item}</span>`).join(` ${t.stepAnd} `);
+    
+    return `${action} ${resStr} ${yieldWord} ${yStr}`;
+}
+
+function resolveTree(targetMetal, amount, bankData, mR, activePrefs = new Set()) {
     let deficits = {};
     let steps = [];
-    const t = i18n[currentLang].items;
-    const yieldWord = i18n[currentLang].stepYields;
+    const t = i18n[currentLang];
     const bankCopy = { ...bankData };
 
     function decompose(item, qty) {
@@ -66,10 +84,28 @@ function resolveTree(targetMetal, amount, bankData, mR) {
 
         if (missing <= 0) return;
 
-        const recipe = RECIPES[item];
+        let recipe = RECIPES[item];
+        
+        if (item === 'messing' && activePrefs.has('bor')) {
+            recipe = { type: 'alloy', primary: 'cuprum', cat1: 'bor', cat2: 'sp' };
+        }
+
         if (!recipe) {
             deficits[item] = (deficits[item] || 0) + missing;
             return;
+        }
+        
+        let currentOreYield = recipe.oreYield;
+        let actionKey = 'stepRefine';
+        
+        if (recipe.type === 'smelt') {
+            if (activePrefs.has('blast_furnace')) { currentOreYield *= 1.25; actionKey = 'stepBlastFurnace'; }
+            else if (activePrefs.has('furnace')) { currentOreYield *= 1.10; actionKey = 'stepFurnace'; }
+            else actionKey = 'stepSmelt';
+        } else if (recipe.type === 'bake') {
+            actionKey = 'stepBake';
+        } else if (recipe.type === 'alloy') {
+            actionKey = 'stepAlloy';
         }
 
         if (recipe.type === 'alloy') {
@@ -77,29 +113,32 @@ function resolveTree(targetMetal, amount, bankData, mR) {
             const cat1Needed = Math.ceil(primaryNeeded * 0.5);
             const cat2Needed = Math.ceil(primaryNeeded * 0.5);
             
-            steps.unshift(`Alloy <span class="highlight">${primaryNeeded.toLocaleString()} ${t[recipe.primary]||recipe.primary}</span> + <span class="highlight">${cat1Needed.toLocaleString()} ${t[recipe.cat1]||recipe.cat1}</span> + <span class="highlight">${cat2Needed.toLocaleString()} ${t[recipe.cat2]||recipe.cat2}</span> ${yieldWord} <span class="highlight">${missing.toLocaleString()} ${t[item]||item}</span>`);
+            let htmlStr = `${t[actionKey] || 'Alloy'} <span class="highlight">${primaryNeeded.toLocaleString()} ${t.items[recipe.primary]||recipe.primary}</span> ${t.stepAnd} <span class="highlight">${cat1Needed.toLocaleString()} ${t.items[recipe.cat1]||recipe.cat1}</span> ${t.stepAnd} <span class="highlight">${cat2Needed.toLocaleString()} ${t.items[recipe.cat2]||recipe.cat2}</span> ${t.stepYields} <span class="highlight">${missing.toLocaleString()} ${t.items[item]||item}</span>`;
+            
+            steps.unshift({
+                html: htmlStr,
+                yields: [{ item: item, amount: missing }]
+            });
             
             decompose(recipe.primary, primaryNeeded);
             decompose(recipe.cat1, cat1Needed);
             decompose(recipe.cat2, cat2Needed);
         }
-        else if (recipe.type === 'smelt' || recipe.type === 'bake') {
-            const oreNeeded = Math.ceil(missing / (recipe.oreYield * mR));
-            const catNeeded = Math.ceil(oreNeeded * recipe.catReq);
+        else if (recipe.type === 'smelt' || recipe.type === 'bake' || recipe.type === 'refine') {
+            let oreNeeded = 0; let catNeeded = 0;
             
-            const action = recipe.type === 'smelt' ? 'Smelt' : 'Bake';
-            steps.unshift(`${action} <span class="highlight">${oreNeeded.toLocaleString()} ${t[recipe.ore]||recipe.ore}</span> + <span class="highlight">${catNeeded.toLocaleString()} ${t[recipe.cat]||recipe.cat}</span> ${yieldWord} <span class="highlight">${missing.toLocaleString()} ${t[item]||item}</span>`);
+            if(recipe.type === 'refine') {
+                oreNeeded = Math.ceil(missing * recipe.oreReq);
+                catNeeded = recipe.cat ? Math.ceil(missing * recipe.catReq) : 0;
+            } else {
+                oreNeeded = Math.ceil(missing / (currentOreYield * mR));
+                catNeeded = Math.ceil(oreNeeded * recipe.catReq);
+            }
             
-            decompose(recipe.ore, oreNeeded);
-            if (recipe.cat) decompose(recipe.cat, catNeeded);
-        }
-        else if (recipe.type === 'refine') {
-            const oreNeeded = Math.ceil(missing * recipe.oreReq);
-            const catNeeded = recipe.cat ? Math.ceil(missing * recipe.catReq) : 0;
-            
-            let stepStr = `Refine <span class="highlight">${oreNeeded.toLocaleString()} ${t[recipe.ore]||recipe.ore}</span>`;
-            if (recipe.cat) stepStr += ` + <span class="highlight">${catNeeded.toLocaleString()} ${t[recipe.cat]||recipe.cat}</span>`;
-            steps.unshift(stepStr + ` ${yieldWord} <span class="highlight">${missing.toLocaleString()} ${t[item]||item}</span>`);
+            steps.unshift({
+                html: makeExtStr(actionKey, oreNeeded, recipe.ore, [{item: item, amount: missing}], catNeeded, recipe.cat),
+                yields: [{ item: item, amount: missing }]
+            });
             
             decompose(recipe.ore, oreNeeded);
             if (recipe.cat) decompose(recipe.cat, catNeeded);
@@ -114,15 +153,15 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
     let raw = { ...deficits }; 
     let bp = {};
     let extSteps = [];
-    
-    const t = i18n[currentLang];
-    const s = (val) => `<span class="highlight">${val.toLocaleString()}</span>`;
 
     let dPyr = raw.pyroxene || 0;
     if (dPyr > 0) {
         let galbReq = Math.ceil(dPyr / (0.622 * mE));
         raw.galbinum = (raw.galbinum || 0) + galbReq;
-        extSteps.unshift(`${t.stepExtract} ${s(galbReq)} ${t.items.galbinum} ${t.stepYields} ${s(dPyr)} ${t.items.pyroxene}`);
+        extSteps.unshift({
+            html: makeExtStr('stepExtract', galbReq, 'galbinum', [{ item: 'pyroxene', amount: dPyr }]),
+            yields: [{ item: 'pyroxene', amount: dPyr }]
+        });
         delete raw.pyroxene;
     }
 
@@ -138,7 +177,11 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
         let genGalb = Math.ceil(reqTephra * yGalb * mE);
         let genRB = Math.ceil(reqTephra * yRB * mE);
         
-        extSteps.unshift(`${t.stepExtract} ${s(reqTephra)} ${t.items.tephra} ${t.stepYields} ${s(genGalb)} ${t.items.galbinum} ${t.stepAnd} ${s(genRB)} ${t.items.redbleckblende}`);
+        let action = route === 'efficient' ? 'stepGrind' : 'stepCrush';
+        extSteps.unshift({
+            html: makeExtStr(action, reqTephra, 'tephra', [{item: 'galbinum', amount: genGalb}, {item: 'redbleckblende', amount: genRB}]),
+            yields: [{ item: 'galbinum', amount: genGalb }, { item: 'redbleckblende', amount: genRB }]
+        });
         
         raw.tephra = reqTephra;
         if (genGalb > dGalb) bp.galbinum = genGalb - dGalb;
@@ -155,12 +198,22 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
             let reqGranum = Math.max(Math.ceil(dBO / yBO), Math.ceil(dGP / yGP));
             let genBO = Math.ceil(reqGranum * yBO);
             let genGP = Math.ceil(reqGranum * yGP);
+            let bpAm = Math.ceil(reqGranum * 0.0882 * mE);
+            let bpFl = Math.ceil(reqGranum * 0.0140 * mE);
             
-            extSteps.unshift(`${t.stepExtract} ${s(reqGranum)} ${t.items.granum} ${t.stepYields} ${s(genBO)} ${t.items.bo} ${t.stepAnd} ${s(genGP)} ${t.items.granumpowder}`);
+            extSteps.unshift({
+                html: makeExtStr('stepCrush', reqGranum, 'granum', [{item: 'bo', amount: genBO}, {item: 'granumpowder', amount: genGP}]),
+                yields: [
+                    { item: 'bo', amount: genBO }, 
+                    { item: 'granumpowder', amount: genGP },
+                    { item: 'amarantum', amount: bpAm },
+                    { item: 'flakestone', amount: bpFl }
+                ]
+            });
             
             raw.granum = reqGranum;
-            bp.amarantum = Math.ceil(reqGranum * 0.0882 * mE);
-            bp.flakestone = Math.ceil(reqGranum * 0.0140 * mE);
+            bp.amarantum = bpAm;
+            bp.flakestone = bpFl;
         } else {
             let crushForGP = Math.ceil(dGP / (0.2940 * mE));
             let boFromCrush = Math.ceil(crushForGP * 0.0770 * mE);
@@ -172,12 +225,24 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
             raw.cp = (raw.cp || 0) + cpForAttract;
             
             if (crushForGP > 0) {
-                extSteps.unshift(`${t.stepExtract} ${s(crushForGP)} ${t.items.granum} ${t.stepYields} ${s(dGP)} ${t.items.granumpowder}`);
-                bp.amarantum = Math.ceil(crushForGP * 0.0882 * mE);
-                bp.flakestone = Math.ceil(crushForGP * 0.0140 * mE);
+                let bpAm = Math.ceil(crushForGP * 0.0882 * mE);
+                let bpFl = Math.ceil(crushForGP * 0.0140 * mE);
+                extSteps.unshift({
+                    html: makeExtStr('stepGrind', crushForGP, 'granum', [{item: 'granumpowder', amount: dGP}]),
+                    yields: [
+                        { item: 'granumpowder', amount: dGP },
+                        { item: 'amarantum', amount: bpAm },
+                        { item: 'flakestone', amount: bpFl }
+                    ]
+                });
+                bp.amarantum = bpAm;
+                bp.flakestone = bpFl;
             }
             if (attractForBO > 0) {
-                extSteps.unshift(`${t.stepExtract} ${s(attractForBO)} ${t.items.granum} + ${s(cpForAttract)} ${t.items.cp} ${t.stepYields} ${s(remainBO)} ${t.items.bo}`);
+                extSteps.unshift({
+                    html: makeExtStr('stepExtract', attractForBO, 'granum', [{item: 'bo', amount: remainBO}], cpForAttract, 'cp'),
+                    yields: [{ item: 'bo', amount: remainBO }]
+                });
             }
         }
         delete raw.bo; delete raw.granumpowder;
@@ -199,7 +264,10 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
         let genSP = Math.ceil(reqSaburra * 0.4275 * mE);
         let genMal = Math.ceil(reqSaburra * 0.0950 * mE);
         
-        extSteps.unshift(`${t.stepExtract} ${s(reqSaburra)} ${t.items.saburra} + ${s(waterReq)} ${t.items.water} ${t.stepYields} ${s(genSP)} ${t.items.sp} ${t.stepAnd} ${s(genMal)} ${t.items.malachite}`);
+        extSteps.unshift({
+            html: makeExtStr('stepGrind', reqSaburra, 'saburra', [{item: 'sp', amount: genSP}, {item: 'malachite', amount: genMal}], waterReq, 'water'),
+            yields: [{ item: 'sp', amount: genSP }, { item: 'malachite', amount: genMal }]
+        });
         
         raw.saburra = reqSaburra;
         raw.water = (raw.water || 0) + waterReq;
@@ -218,7 +286,10 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
             let waterReq = Math.ceil(reqCP * 0.1);
             
             if (reqCP > 0) {
-                extSteps.unshift(`${t.stepExtract} ${s(reqCP)} ${t.items.calx} + ${s(waterReq)} ${t.items.water} ${t.stepYields} ${s(dCP)} ${t.items.cp} ${t.stepAnd} ${s(coalFromGrind)} ${t.items.coal}`);
+                extSteps.unshift({
+                    html: makeExtStr('stepGrind', reqCP, 'calx', [{item: 'cp', amount: dCP}, {item: 'coal', amount: coalFromGrind}], waterReq, 'water'),
+                    yields: [{ item: 'cp', amount: dCP }, { item: 'coal', amount: coalFromGrind }]
+                });
             }
             
             raw.calx = (raw.calx || 0) + reqCP;
@@ -227,16 +298,23 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
             let remainCoal = Math.max(0, dCoal - coalFromGrind);
             if (remainCoal > 0) {
                 let crushReq = Math.ceil(remainCoal / (0.2160 * mE));
-                extSteps.unshift(`${t.stepExtract} ${s(crushReq)} ${t.items.calx} ${t.stepYields} ${s(remainCoal)} ${t.items.coal}`);
+                let bCal = Math.ceil(crushReq * 0.0360 * mE);
+                extSteps.unshift({
+                    html: makeExtStr('stepFurnace', crushReq, 'calx', [{item: 'coal', amount: remainCoal}]),
+                    yields: [{ item: 'coal', amount: remainCoal }, { item: 'calspar', amount: bCal }]
+                });
                 raw.calx += crushReq;
-                bp.calspar = Math.ceil(crushReq * 0.0360 * mE);
+                bp.calspar = bCal;
             }
         } else {
             let reqCoal = Math.ceil(dCoal / (0.2160 * mE));
             let cpFromCrush = Math.ceil(reqCoal * 0.1361 * mE);
             
             if (reqCoal > 0) {
-                extSteps.unshift(`${t.stepExtract} ${s(reqCoal)} ${t.items.calx} ${t.stepYields} ${s(dCoal)} ${t.items.coal} ${t.stepAnd} ${s(cpFromCrush)} ${t.items.cp}`);
+                extSteps.unshift({
+                    html: makeExtStr('stepCrush', reqCoal, 'calx', [{item: 'coal', amount: dCoal}, {item: 'cp', amount: cpFromCrush}]),
+                    yields: [{ item: 'coal', amount: dCoal }, { item: 'cp', amount: cpFromCrush }]
+                });
             }
             raw.calx = (raw.calx || 0) + reqCoal;
             
@@ -244,7 +322,10 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
             if (remainCP > 0) {
                 let grindReq = Math.ceil(remainCP / (0.2058 * mE));
                 let waterReq = Math.ceil(grindReq * 0.1);
-                extSteps.unshift(`${t.stepExtract} ${s(grindReq)} ${t.items.calx} + ${s(waterReq)} ${t.items.water} ${t.stepYields} ${s(remainCP)} ${t.items.cp}`);
+                extSteps.unshift({
+                    html: makeExtStr('stepGrind', grindReq, 'calx', [{item: 'cp', amount: remainCP}], waterReq, 'water'),
+                    yields: [{ item: 'cp', amount: remainCP }]
+                });
                 raw.calx += grindReq;
                 raw.water = (raw.water || 0) + waterReq;
             }
@@ -252,6 +333,8 @@ function resolveExtractions(deficits, route, mE, mM, bankData) {
         delete raw.cp; delete raw.coal;
     }
 
+    let grossRaw = { ...raw }; 
     Object.keys(raw).forEach(k => { raw[k] = Math.max(0, raw[k] - (bankData[k] || 0)); });
-    return { raw, bp, extSteps };
+    
+    return { raw, grossRaw, bp, extSteps };
 }
