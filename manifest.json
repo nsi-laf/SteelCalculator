@@ -1,6 +1,7 @@
 {
-  "name": "Quartermaster Command",
+  "name": "Quartermaster Command v5.3",
   "short_name": "QM Command",
+  "description": "The ultimate Mortal Online 2 logistics and metallurgy calculator.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f0f12",
