@@ -1,11 +1,15 @@
 function initMarketData() {
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
-        if (!marketData[k]) marketData[k] = [{ p: defaultPrices[k] || 0, q: 0 }];
+        let p = defaultPrices[k];
+        if (!p) p = (k === 'tephra') ? 40 : 15;
+        if (!marketData[k]) marketData[k] = [{ p: p, q: 0 }];
     });
 }
 
 function addMarketTier(k) {
-    marketData[k].push({ p: defaultPrices[k] || 0, q: 0 });
+    let p = defaultPrices[k];
+    if (!p) p = (k === 'tephra') ? 40 : 15;
+    marketData[k].push({ p: p, q: 0 });
     renderMarketTable();
 }
 
@@ -22,7 +26,11 @@ function clearMarketTier(k, idx) {
 }
 
 function clearCart() {
-    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => marketData[k] = [{ p: defaultPrices[k] || 0, q: 0 }]);
+    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
+        let p = defaultPrices[k];
+        if (!p) p = (k === 'tephra') ? 40 : 15;
+        marketData[k] = [{ p: p, q: 0 }];
+    });
     renderMarketTable();
     handlePipelineChange();
 }
@@ -52,13 +60,16 @@ function autoFillCart() {
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         const mode = document.getElementById('mode').value;
         let needed = pureDeficits[k] || 0;
+        let defaultP = defaultPrices[k];
+        if (!defaultP) defaultP = (k === 'tephra') ? 40 : 15;
         marketData[k] = [{ 
-            p: marketData[k]?.[0]?.p || defaultPrices[k] || 0, 
+            p: marketData[k]?.[0]?.p || defaultP, 
             q: mode === 'stacks' ? parseFloat((needed / 10000).toFixed(4)) : needed 
         }];
     });
     renderMarketTable();
     handlePipelineChange(); 
+    closeModal('cartModal');
 }
 
 function renderMarketTable() {
@@ -147,7 +158,8 @@ function renderBankTable() {
 
 function updateVisibility(targetMetal) {
     const relevant = getRelevantItems(targetMetal);
-    const showAll = document.getElementById('showAllBank')?.checked;
+    const showAllBank = document.getElementById('showAllBank')?.checked;
+    const showAllCart = document.getElementById('showAllCart')?.checked;
     
     CATEGORIES.forEach(cat => {
         let catHasVisibleBank = false;
@@ -156,9 +168,9 @@ function updateVisibility(targetMetal) {
         cat.items.forEach(k => {
             const rowB = document.getElementById('row_b_' + k);
             if (rowB) {
-                if (k === targetMetal && !showAll) {
+                if (k === targetMetal && !showAllBank) {
                     rowB.style.display = 'none';
-                } else if (showAll || relevant.has(k)) {
+                } else if (showAllBank || relevant.has(k)) {
                     rowB.style.display = '';
                     catHasVisibleBank = true;
                 } else {
@@ -168,9 +180,9 @@ function updateVisibility(targetMetal) {
 
             const rowM = document.getElementById('row_m_' + k);
             if (rowM) {
-                if (k === targetMetal && !showAll) {
+                if (k === targetMetal && !showAllCart) {
                     rowM.style.display = 'none';
-                } else if (showAll || relevant.has(k)) {
+                } else if (showAllCart || relevant.has(k)) {
                     rowM.style.display = 'grid';
                     catHasVisibleMarket = true;
                 } else {

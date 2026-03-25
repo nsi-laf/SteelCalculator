@@ -60,6 +60,7 @@ function updatePathChoice(e, stepKey, selectedRoute) {
         document.getElementById('btnPrefEfficient')?.classList.remove('active-global');
         document.getElementById('btnPrefYield')?.classList.remove('active-global');
     }
+    
     userPathChoices[stepKey] = selectedRoute;
     save();
     run();
@@ -104,7 +105,7 @@ function updateFocusView() {
     });
     const navText = document.getElementById('focusProgressText');
     if (navText && pipelineStepsRaw.length > 0) {
-        navText.innerText = `Step ${focusIndex + 1} of ${pipelineStepsRaw.length}`;
+        navText.innerText = `${i18n[currentLang].stepPrefix} ${focusIndex + 1} / ${pipelineStepsRaw.length}`;
     }
 }
 
@@ -119,8 +120,10 @@ function updatePipelineVisuals() {
     
     const progBar = document.getElementById('projectProgress');
     const progText = document.getElementById('projectProgressText');
+    const t = i18n[currentLang];
+    
     if(progBar) progBar.style.width = percent + '%';
-    if(progText) progText.innerText = percent + '% Pipeline Completed';
+    if(progText) progText.innerText = `${percent}% ${t.pipeCompleted}`;
 }
 
 function toggleStep(index) {
@@ -167,7 +170,7 @@ function toggleStep(index) {
 }
 
 function restartPipeline() {
-    if (!confirm(i18n[currentLang].restartPrompt || "Restart the pipeline? This will un-check all steps and remove their yields from your bank.")) return;
+    if (!confirm(i18n[currentLang].restartPrompt || "Restart the pipeline? This will un-check all steps and remove their yields from your inventory.")) return;
     clearPipelineProgress();
     updatePipelineVisuals();
     if(pipelineViewMode === 'focus') updateFocusView();

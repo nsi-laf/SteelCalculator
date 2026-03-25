@@ -16,11 +16,14 @@ function buildDiscordMessage() {
     });
     if (bankString !== "") msg += `**CURRENT BANK STOCK:**\n\`\`\`\n${bankString}\`\`\`\n`;
 
-    let marketString = ""; let hasMarket = false;
+    let marketString = ""; let hasMarket = false; let totalGold = 0;
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         let totalQty = 0;
         if(marketData[k]) {
-            marketData[k].forEach(tier => totalQty += tier.q);
+            marketData[k].forEach(tier => {
+                totalQty += tier.q;
+                totalGold += (tier.q / (mode === 'stacks' ? 1 : 10000)) * tier.p;
+            });
         }
         if (totalQty > 0 && relevant.has(k)) {
             let fmtAmt = mode === 'stacks' ? totalQty.toFixed(2) + " Stacks" : totalQty.toLocaleString();
@@ -28,18 +31,25 @@ function buildDiscordMessage() {
             hasMarket = true;
         }
     });
+    
+    if (hasMarket) {
+        msg += `**${t.discMarket}**\n\`\`\`\n${marketString}\`\`\`\n*Total Estimated Gold Cost: ${totalGold.toFixed(2)} g*\n\n`;
+    }
 
-    if (hasMarket) msg += `**${t.discMarket}**\n\`\`\`\n${marketString}\nTotal Budget: ${document.getElementById('cartTotalGold').innerText}\n\`\`\`\n`;
+    let gatherString = ""; let hasGather = false;
+    Object.keys(pureDeficits).forEach(k => {
+        if (pureDeficits[k] > 0) {
+            let fmtAmt = mode === 'stacks' ? (pureDeficits[k]/10000).toFixed(2) + " Stacks" : pureDeficits[k].toLocaleString();
+            gatherString += `- ${t.items[k]||k}: ${fmtAmt}\n`;
+            hasGather = true;
+        }
+    });
 
-    const stacks = document.getElementById('statStacks').innerText;
-    msg += `**${t.discReq}**\n\`\`\`\n`;
-    const items = document.querySelectorAll('.logistics-item');
-    if (items.length === 0) msg += `${t.discStock}\n`;
-    items.forEach(el => msg += `- ${el.innerText.replace('\n', ': ')}\n`);
-    msg += `\nTotal: ${stacks} Stacks to Gather\`\`\`\n`;
+    if (hasGather) msg += `**${t.discReq}**\n\`\`\`diff\n- ${gatherString.replace(/\n/g, '\n- ')}\`\`\`\n`;
+    else msg += `**${t.discReq}**\n\`\`\`yaml\n${t.discStock}\`\`\`\n`;
 
     if (pipelineStepsRaw.length > 0) {
-        msg += `**MANUFACTURING PIPELINE:**\n\`\`\`\n`;
+        msg += `**${t.mfgPipe.toUpperCase()}**\n\`\`\`md\n`;
         pipelineStepsRaw.forEach((stepObj, index) => {
             let checkmark = completedSteps.includes(index) ? '[x] ' : '[ ] ';
             let textAction = stepObj.htmlAction.replace(/<[^>]*>?/gm, '');
@@ -68,8 +78,18 @@ async function sendToDiscord() {
     const webhookUrl = document.getElementById('webhookUrl').value;
     if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) { alert(t.errWebhook); openModal('settingsModal'); return; }
 
+    const msg = buildDiscordMessage();
+
     try {
-        const response = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: buildDiscordMessage(), username: "Quartermaster Command", avatar_url: "https://i.imgur.com/B1pE1H7.png" }) });
-        if (response.ok) alert(t.sucSend); else alert(t.errSend);
-    } catch (error) { alert(t.errSend); }
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: msg })
+        });
+
+        if (response.ok) alert(t.sucSend);
+        else alert(t.errSend + ` Status: ${response.status}`);
+    } catch (e) {
+        alert(t.errSend + " " + e.message);
+    }
 }

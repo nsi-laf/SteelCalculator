@@ -1,7 +1,7 @@
 function openModal(modalId) {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     document.getElementById(modalId).style.display = 'block';
-    if(modalId === 'settingsModal') switchTab('prefs');
+    if(modalId === 'settingsModal') switchTab('view');
     if(modalId === 'helpModal') switchHelpTab('guide');
 }
 
@@ -10,7 +10,7 @@ function closeModal(modalId) {
 }
 
 window.onclick = function(event) { 
-    ['settingsModal', 'actionsModal', 'helpModal'].forEach(id => {
+    ['settingsModal', 'helpModal', 'bankModal', 'cartModal', 'prodModal'].forEach(id => {
         if (event.target == document.getElementById(id)) closeModal(id); 
     });
 }
@@ -58,10 +58,22 @@ function toggleMainModule(modId, isVisible = null) {
     const checkbox = document.getElementById(checkboxId);
     if (checkbox) checkbox.checked = isVisible;
 
-    if (modId === 'mod_invBank') document.getElementById('btnHeaderBank').classList.toggle('active', isVisible);
-    if (modId === 'mod_marketCart') document.getElementById('btnHeaderCart').classList.toggle('active', isVisible);
-
     save();
+}
+
+window.addEventListener('scroll', () => {
+    const btn = document.getElementById('btnReturnTop');
+    if (btn) {
+        if (document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
+            btn.style.display = 'flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+});
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function setLang(code) {
@@ -78,21 +90,24 @@ function changeLang() {
     document.getElementById('flag_fr').classList.toggle('active', currentLang === 'fr');
     
     const standardElements = [
-        'tabPrefs', 'tabInteg', 'tabData', 'tabHelp', 'tabView', 'tabActions', 'resetDesc', 'themeToggle', 'format', 
-        'optUnits', 'optStacks', 'webhook', 'prodCmd', 'targetMetalLabel', 'target', 'crafters', 
-        'yieldMods', 'mastery', 'refining', 'extraction', 'btnMaxText', 'btnDiscord', 'btnSend', 
-        'invBank', 'showAllBank', 'btnReset', 'defGather', 'mfgPipe', 'marketCart', 'btnAutoFill', 
+        'tabPrefs', 'tabData', 'tabHelp', 'tabView', 'resetDesc', 'format', 
+        'optUnits', 'optStacks', 'targetMetalLabel', 'target', 'crafters', 
+        'yieldMods', 'mastery', 'refining', 'extraction', 'btnDiscord', 'btnSend', 
+        'invBank', 'invBankTitle', 'showAllBank', 'btnReset', 'defGather', 'mfgPipe', 'marketCart', 'marketCartTitle', 'showAllCart', 'btnAutoFill', 
         'shareTitle', 'shareDesc', 'btnGenCode', 'btnLoadCode', 'helpFeatures', 'helpHowTo',
-        'colorAccent', 'colorBg', 'colorText', 'btnResetColors', 'viewProd', 'viewYield',
-        'viewBank', 'viewCart', 'viewGather', 'viewPipe', 'btnRestart', 'legend', 'legCP', 'legSP',
-        'legBO', 'legPI', 'legGS', 'legStk', 'legBest', 'legMax', 'legRegion', 'viewLegend', 'btnBank', 'btnCart', 
-        'btnSettings', 'btnActions', 'btnHelp', 'btnClearCart', 'modalActionsTitle', 'viewLang',
-        'prefRoute', 'actCart', 'actDiscord', 'actPipe', 'viewPers', 'viewVis', 'tabGuide', 'tabLegend', 'legBestTxt', 'legMaxTxt', 'legRegionTxt'
+        'colorAccent', 'colorBg', 'colorText', 'btnResetColors', 'viewProd', 
+        'viewGather', 'viewPipe', 'legCP', 'legSP',
+        'legBO', 'legPI', 'legGS', 'legStk', 'btnBank', 'btnCart', 
+        'btnSettings', 'btnHelp', 'btnClearCart', 'viewLang',
+        'actDiscord', 'viewPers', 'viewVis', 'tabGuide', 'tabLegend',
+        'btnProd', 'prodCmdTitle', 'btnExportCSV', 'bpTitle', 'btnBp', 'btnPrefEfficient', 'btnPrefYield', 'projectProgressText',
+        'btnPipeReset'
     ];
     
     const htmlElements = [
-        'helpSubtitle', 'helpFeat1', 'helpFeat2', 'helpFeat3', 'helpFeat4', 'helpFeat5',
-        'helpHow1', 'helpHow2', 'helpHow3', 'helpHow4'
+        'helpSubtitle', 'helpFeat1', 'helpFeat3', 'helpFeat4', 'helpFeat5',
+        'helpHow1', 'helpHow2', 'helpHow3', 'helpHow4',
+        'legBestTxt', 'legMaxTxt', 'legRegionTxt'
     ];
 
     standardElements.forEach(id => {
@@ -107,5 +122,6 @@ function changeLang() {
 
     renderBankTable(); 
     renderMarketTable(); 
+    updatePipelineVisuals();
     run();
 }

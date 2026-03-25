@@ -33,76 +33,10 @@ function handleModeChange() {
 }
 
 function targetMetalChanged() {
-    const metal = document.getElementById('targetMetal').value;
-    const recipeRow = document.getElementById('recipeRow');
-    const recipeSelect = document.getElementById('targetRecipe');
-    
-    let recipesObj = RECIPES[metal];
-    if (recipesObj && Object.keys(recipesObj).length > 1) {
-        recipeRow.style.display = 'flex';
-        recipeSelect.innerHTML = '';
-        Object.keys(recipesObj).forEach(rName => {
-            let sel = (userPathChoices[`recipe_${metal}`] === rName) ? 'selected' : '';
-            recipeSelect.innerHTML += `<option value="${rName}" ${sel}>${rName}</option>`;
-        });
-    } else {
-        recipeRow.style.display = 'none';
-    }
-    
-    handlePipelineChange();
-}
-
-function targetRecipeChanged() {
-    const metal = document.getElementById('targetMetal').value;
-    const val = document.getElementById('targetRecipe').value;
-    userPathChoices[`recipe_${metal}`] = val;
     handlePipelineChange();
 }
 
 function run() { clearTimeout(timer); timer = setTimeout(calculate, 150); }
-
-function calculateMax() {
-    const mode = document.getElementById('mode').value;
-    const targetMetal = document.getElementById('targetMetal').value;
-    const mult = mode === 'stacks' ? 10000 : 1;
-    
-    const mR = document.getElementById('modRef').checked ? 1.03 : 1;
-    const mE = document.getElementById('modExt').checked ? 1.03 : 1;
-    const mM = document.getElementById('modMast').checked ? 1.06 : 1;
-
-    const bank = {}; 
-    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => bank[k] = (Number(document.getElementById('b_' + k)?.value) || 0) * mult);
-
-    const primaryChain = getPrimaryChain(targetMetal);
-
-    let low = 0, high = 1000000 * mult, maxPossible = 0;
-    while(low <= high) {
-        let mid = Math.floor((low + high) / 2);
-        if (mid === 0) { low = mid + 1; continue; }
-        
-        const tree = resolveTree(targetMetal, mid, bank, mR);
-        const extractions = resolveExtractions(tree.deficits, mE, mM, bank);
-        
-        let hasPrimaryDeficit = false;
-        Object.keys(extractions.raw).forEach(k => {
-            if (extractions.raw[k] > 0 && primaryChain.includes(k)) {
-                hasPrimaryDeficit = true; 
-            }
-        });
-
-        if (!hasPrimaryDeficit) {
-            maxPossible = mid;
-            low = mid + 1;
-        } else {
-            high = mid - 1;
-        }
-    }
-    
-    if (maxPossible === 0) maxPossible = mode === 'stacks' ? 10000 : 1;
-    document.getElementById('targetAmount').value = mode === 'stacks' ? parseFloat((maxPossible / 10000).toFixed(4)) : maxPossible;
-    
-    handlePipelineChange();
-}
 
 function calculate() {
     const mode = document.getElementById('mode').value;
@@ -118,6 +52,9 @@ function calculate() {
         document.getElementById('statStacks').innerText = "0.00";
         if(document.getElementById('cartTotalGold')) document.getElementById('cartTotalGold').innerText = "0.00 g";
         pipelineStepsRaw = []; byproductsRaw = {}; pureDeficits = {};
+        document.getElementById('btnBp').style.display = 'none';
+        document.getElementById('bpContainer').style.display = 'none';
+        document.getElementById('btnBp').classList.remove('active');
         Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
             if(document.getElementById('cost_'+k)) document.getElementById('cost_'+k).innerText = "0.00";
             if(document.getElementById('stash_'+k)) document.getElementById('stash_'+k).innerText = "0";
@@ -257,7 +194,7 @@ function calculate() {
     Object.keys(byproductsRaw).forEach(k => {
         if (byproductsRaw[k] > 0) {
             let itemName = t.items[k] || (k.charAt(0).toUpperCase() + k.slice(1));
-            byproductsString += `<div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+            byproductsString += `<div style="display:flex; justify-content:space-between; margin-bottom: 2px; font-size: 13px;">
                 <span>${itemName}</span>
                 <span style="color: var(--accent); font-weight: bold;">${byproductsRaw[k].toLocaleString()}</span>
             </div>`;
@@ -265,10 +202,12 @@ function calculate() {
     });
 
     if (byproductsString !== "") {
-        outputHTML += `<div style="margin-top: 15px; padding: 10px; border-top: 1px dashed var(--border); color: var(--text-dim); font-size: 12px;">
-            <div style="font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${t.byproductsTitle}</div>
-            ${byproductsString}
-        </div>`;
+        document.getElementById('btnBp').style.display = 'inline-flex';
+        document.getElementById('bpOutput').innerHTML = byproductsString;
+    } else {
+        document.getElementById('btnBp').style.display = 'none';
+        document.getElementById('bpContainer').style.display = 'none';
+        document.getElementById('btnBp').classList.remove('active');
     }
 
     document.getElementById('stepsOutput').innerHTML = outputHTML;
@@ -278,6 +217,64 @@ function calculate() {
 
     updateVisibility(targetMetal);
     save();
+}
+
+function exportToCSV() {
+    const t = i18n[currentLang];
+    const mode = document.getElementById('mode').value;
+    const targetMetal = document.getElementById('targetMetal').value;
+    const targetVal = document.getElementById('targetAmount').value;
+    
+    let csv = `Quartermaster Command Logistics Order\nTarget:,${t.items[targetMetal]},Amount:,${targetVal} ${mode === 'stacks' ? 'Stacks' : 'Units'}\n\n`;
+    csv += "Item,Inventory Stock,Market Cart Buy,Deficit to Gather\n";
+    
+    const relevant = getRelevantItems(targetMetal);
+
+    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
+        if(relevant.has(k) || pureDeficits[k]) {
+            let b = Number(document.getElementById('b_'+k)?.value) || 0;
+            let cQty = 0;
+            if(marketData[k]) marketData[k].forEach(tier => cQty += tier.q);
+            let d = pureDeficits[k] || 0;
+
+            if(b > 0 || cQty > 0 || d > 0) {
+                let itemName = t.items[k] || k;
+                let fmtB = mode === 'stacks' ? b : b;
+                let fmtC = mode === 'stacks' ? cQty : cQty;
+                let fmtD = mode === 'stacks' ? (d/10000).toFixed(2) : d;
+                csv += `"${itemName}",${fmtB},${fmtC},${fmtD}\n`;
+            }
+        }
+    });
+
+    csv += "\nPipeline Steps\n";
+    pipelineStepsRaw.forEach((stepObj, index) => {
+        let textAction = stepObj.htmlAction.replace(/<[^>]*>?/gm, '');
+        csv += `${index + 1},"${textAction}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "quartermaster_order.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function toggleBpTab() {
+    const el = document.getElementById('bpContainer');
+    const btn = document.getElementById('btnBp');
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.classList.add('active');
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    } else {
+        el.style.display = 'none';
+        btn.classList.remove('active');
+    }
 }
 
 window.onload = () => {

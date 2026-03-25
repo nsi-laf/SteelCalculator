@@ -2,12 +2,10 @@ function getPrimaryChain(targetMetal) {
     let chain = [targetMetal];
     let current = targetMetal;
     while (current) {
-        let recOpts = RECIPES[current];
-        if (recOpts) {
-            let firstKey = Object.keys(recOpts)[0];
-            let rec = recOpts[firstKey]; 
-            if (rec.type === 'alloy') current = rec.primary;
-            else if (rec.type === 'smelt') current = rec.ore;
+        let rec = RECIPES[current];
+        if (rec) {
+            let rKey = Object.keys(rec)[0];
+            if (rec[rKey] && rec[rKey].type === 'alloy') current = rec[rKey].primary;
             else current = null;
         } else if (EXTRACT_MAP[current]) {
             current = EXTRACT_MAP[current]; 
@@ -25,17 +23,12 @@ function getRelevantItems(targetMetal) {
     
     while(queue.length > 0) {
         let item = queue.shift();
+        let rec = RECIPES[item];
         
-        let recOpts = RECIPES[item];
-        if (recOpts) {
-            Object.values(recOpts).forEach(rec => {
-                if (rec.type === 'alloy') {
-                    let deps = [rec.primary, rec.cat1, rec.cat2];
-                    deps.forEach(d => { if (d && !relevant.has(d)) { relevant.add(d); queue.push(d); } });
-                } else if (rec.type === 'smelt') {
-                    let deps = [rec.ore, rec.cat];
-                    deps.forEach(d => { if (d && !relevant.has(d)) { relevant.add(d); queue.push(d); } });
-                }
+        if (rec) {
+            Object.values(rec).forEach(variant => {
+                let deps = [variant.primary, variant.cat1, variant.cat2, variant.ore, variant.cat];
+                deps.forEach(d => { if (d && !relevant.has(d)) { relevant.add(d); queue.push(d); } });
             });
         }
         
@@ -47,23 +40,18 @@ function getRelevantItems(targetMetal) {
     return relevant;
 }
 
-function makeExtStr(actionKey, qty, item, yields, catQty = 0, catItem = null) {
-    const t = i18n[currentLang];
-    let action = t[actionKey] || actionKey;
-    
-    let resStr = `<span class="highlight">${qty.toLocaleString()} ${t.items[item]|| (item.charAt(0).toUpperCase() + item.slice(1))}</span>`;
-    if (catQty > 0 && catItem) {
-        resStr += ` ${t.stepWith} <span class="highlight">${catQty.toLocaleString()} ${t.items[catItem]|| (catItem.charAt(0).toUpperCase() + catItem.slice(1))}</span>`;
-    }
-    
-    return `${action} ${resStr}`;
-}
-
 function resolveTree(targetMetal, amount, bankData, mR) {
     let deficits = {};
     let steps = [];
     const t = i18n[currentLang];
     const bankCopy = { ...bankData };
+
+    // Fallbacks to guarantee translations never render as undefined
+    const vAlloy = t.verbAlloy || "Alloy";
+    const vSmelt = t.verbSmelt || "Smelt";
+    const vAnd = t.stepAnd || "and";
+    const vWith = t.stepWith || "with";
+    const vInMachine = t.inMachine || "in the";
 
     function decompose(item, qty) {
         if (!qty || qty <= 0) return;
@@ -78,69 +66,65 @@ function resolveTree(targetMetal, amount, bankData, mR) {
 
         if (missing <= 0) return;
 
-        let recipesObj = RECIPES[item];
-        if (!recipesObj) {
+        let recipe = RECIPES[item];
+        if (!recipe) {
             deficits[item] = (deficits[item] || 0) + missing;
             return;
         }
         
-        let availableRoutes = Object.keys(recipesObj);
+        let availableRoutes = Object.keys(recipe);
         let stepKey = `recipe_${item}`;
-        let routeName = userPathChoices[stepKey];
+        let rKey = userPathChoices[stepKey] || availableRoutes[0];
+        if (!recipe[rKey]) rKey = availableRoutes[0];
         
-        if (item === document.getElementById('targetMetal').value) {
-            let dropdownVal = document.getElementById('targetRecipe').value;
-            if (dropdownVal && recipesObj[dropdownVal]) {
-                routeName = dropdownVal;
-                userPathChoices[stepKey] = routeName;
-            }
+        let routeStats = [];
+        if (availableRoutes.length > 1) {
+            routeStats = availableRoutes.map(rName => ({
+                name: rName,
+                isBestYield: false,
+                isMaxYield: false,
+                isRegionLocked: false
+            }));
         }
-
-        if (!routeName || !recipesObj[routeName]) routeName = availableRoutes[0];
         
-        let recipe = recipesObj[routeName];
+        let recObj = recipe[rKey];
         
-        let routeStats = availableRoutes.map(rName => {
-            return { name: rName, isBestYield: false, isMaxYield: false, isRegionLocked: false };
-        });
-
-        if (recipe.type === 'alloy') {
+        if (recObj.type === 'alloy') {
             const primaryNeeded = Math.ceil(missing / (0.7 * mR));
             const cat1Needed = Math.ceil(primaryNeeded * 0.5);
             const cat2Needed = Math.ceil(primaryNeeded * 0.5);
             
-            let htmlStr = `<strong>${t.stepAlloy || 'Alloy'} <span class="highlight">${primaryNeeded.toLocaleString()} ${t.items[recipe.primary]|| (recipe.primary.charAt(0).toUpperCase() + recipe.primary.slice(1))}</span> ${t.stepAnd} <span class="highlight">${cat1Needed.toLocaleString()} ${t.items[recipe.cat1]|| (recipe.cat1.charAt(0).toUpperCase() + recipe.cat1.slice(1))}</span> ${t.stepAnd} <span class="highlight">${cat2Needed.toLocaleString()} ${t.items[recipe.cat2]|| (recipe.cat2.charAt(0).toUpperCase() + recipe.cat2.slice(1))}</span></strong>`;
+            let htmlStr = `<strong>${vAlloy} <span class="highlight">${primaryNeeded.toLocaleString()} ${t.items[recObj.primary]||recObj.primary}</span>, <span class="highlight">${cat1Needed.toLocaleString()} ${t.items[recObj.cat1]||recObj.cat1}</span> ${vAnd} <span class="highlight">${cat2Needed.toLocaleString()} ${t.items[recObj.cat2]||recObj.cat2}</span></strong>`;
             
             steps.unshift({
                 htmlAction: htmlStr,
                 mainYields: [{ item: item, amount: missing }],
                 byproducts: [],
                 stepKey: stepKey,
-                routeStats: availableRoutes.length > 1 ? routeStats : [],
-                selectedRoute: routeName
+                routeStats: routeStats,
+                selectedRoute: rKey
             });
             
-            decompose(recipe.primary, primaryNeeded);
-            decompose(recipe.cat1, cat1Needed);
-            decompose(recipe.cat2, cat2Needed);
+            decompose(recObj.primary, primaryNeeded);
+            decompose(recObj.cat1, cat1Needed);
+            decompose(recObj.cat2, cat2Needed);
+        } else if (recObj.type === 'smelt') {
+            const oreNeeded = Math.ceil(missing / (recObj.oreYield * mR));
+            const catNeeded = Math.ceil(oreNeeded * recObj.catReq);
             
-        } else if (recipe.type === 'smelt') {
-            const oreNeeded = Math.ceil(missing / (recipe.oreYield * mR));
-            const catNeeded = Math.ceil(oreNeeded * recipe.catReq);
-
-            let htmlStr = `<strong>${t.stepSmelt || 'Smelt'} <span class="highlight">${oreNeeded.toLocaleString()} ${t.items[recipe.ore]|| (recipe.ore.charAt(0).toUpperCase() + recipe.ore.slice(1))}</span> ${t.stepWith} <span class="highlight">${catNeeded.toLocaleString()} ${t.items[recipe.cat]|| (recipe.cat.charAt(0).toUpperCase() + recipe.cat.slice(1))}</span></strong>`;
-
+            let htmlStr = `<strong>${vSmelt} <span class="highlight">${oreNeeded.toLocaleString()} ${t.items[recObj.ore]||recObj.ore}</span> ${vInMachine} Furnace ${vWith} <span class="highlight">${catNeeded.toLocaleString()} ${t.items[recObj.cat]||recObj.cat}</span></strong>`;
+            
             steps.unshift({
                 htmlAction: htmlStr,
                 mainYields: [{ item: item, amount: missing }],
                 byproducts: [],
                 stepKey: stepKey,
-                routeStats: availableRoutes.length > 1 ? routeStats : [],
-                selectedRoute: routeName
+                routeStats: routeStats,
+                selectedRoute: rKey
             });
-
-            decompose(recipe.ore, oreNeeded);
-            decompose(recipe.cat, catNeeded);
+            
+            decompose(recObj.ore, oreNeeded);
+            decompose(recObj.cat, catNeeded);
         }
     }
 
@@ -153,10 +137,12 @@ function resolveExtractions(deficits, mE, mM, bankData) {
     let bp = {};
     let extSteps = [];
 
+    let localExtractMap = { ...EXTRACT_MAP };
+
     const sequence = [
         'skadite', 'electrum', 'gemmetal', 'sanguinite', 'almine', 'acronite', 'lupium',
-        'pi', 'cuprum', 'coke', 'pitch', 'ichor', 'sulfur',
-        'bo', 'pyroxene', 'galbinum', 'redbleckblende', 'maalite', 'pyropite', 'kyanite', 'aabam', 'calamine', 'silver', 'chalkglance', 'waterstone',
+        'pi', 'cuprum', 'coke', 'pitch', 'ichor',
+        'bo', 'pyroxene', 'galbinum', 'redbleckblende', 'maalite', 'pyropite', 'aabam', 'calamine', 'silver', 'chalkglance', 'waterstone',
         'bleck', 'bleckblende', 'jadeite', 'malachite', 'sp', 'granumpowder', 'amarantum', 'flakestone', 'calspar', 'coal', 'cp', 'cinnabar', 'magmum', 'volcanicash', 'pyrite', 'gaborepowder', 'lodestonepowder', 'ritualash'
     ];
 
@@ -169,9 +155,9 @@ function resolveExtractions(deficits, mE, mM, bankData) {
         
         for (let i=0; i<sequence.length; i++) {
             let item = sequence[i];
-            if (raw[item] > 0 && EXTRACT_MAP[item]) {
-                let source = EXTRACT_MAP[item];
-                let itemsFromSource = Object.keys(raw).filter(k => raw[k] > 0 && EXTRACT_MAP[k] === source);
+            if (raw[item] > 0 && localExtractMap[item]) {
+                let source = localExtractMap[item];
+                let itemsFromSource = Object.keys(raw).filter(k => raw[k] > 0 && localExtractMap[k] === source);
                 if (itemsFromSource.length === 0) continue;
 
                 let stepKey = `${source}_${itemsFromSource.slice().sort().join('_')}`;
@@ -212,37 +198,30 @@ function resolveExtractions(deficits, mE, mM, bankData) {
                     let minTotal = Math.min(...validReqs.map(s => s.totalCost));
                     let maxBp = Math.max(...validReqs.map(s => s.totalByproducts));
                     
-                    routeStats.forEach(s => {
-                        s.isBestYield = (s.totalCost === minTotal && s.req > 0);
-                        s.isMaxYield = (s.totalByproducts === maxBp && s.req > 0 && maxBp > 0);
+                    validReqs.forEach(s => {
+                        s.isBestYield = (s.totalCost === minTotal);
+                        s.isMaxYield = (s.totalByproducts === maxBp && maxBp > 0);
                     });
                 }
 
-                let routeName = userPathChoices[stepKey] || availableRoutes[0];
+                let routeName = userPathChoices[stepKey];
+                
+                if (!routeName || !validReqs.find(s => s.name === routeName)) {
+                    routeName = validReqs.length > 0 ? validReqs[0].name : availableRoutes[0];
+                }
                 
                 if (globalRoutePref === 'efficient') {
-                    let best = routeStats.find(s => s.isBestYield);
+                    let best = validReqs.find(s => s.isBestYield);
                     if (best) routeName = best.name;
                 } else if (globalRoutePref === 'yield') {
-                    let max = routeStats.find(s => s.isMaxYield);
+                    let max = validReqs.find(s => s.isMaxYield);
                     if (max) routeName = max.name;
                 }
 
-                if(!EXTRACTION_ROUTES[source][routeName]) {
-                    routeName = availableRoutes[0];
-                }
+                userPathChoices[stepKey] = routeName;
+                let route = EXTRACTION_ROUTES[source][routeName];
 
                 let maxSourceReq = routeStats.find(s => s.name === routeName)?.req || 0;
-
-                if (maxSourceReq === 0) {
-                    let validRoute = routeStats.find(s => s.req > 0);
-                    if (validRoute) {
-                        routeName = validRoute.name;
-                        maxSourceReq = validRoute.req;
-                    }
-                }
-
-                let route = EXTRACTION_ROUTES[source][routeName];
 
                 if (maxSourceReq > 0) {
                     raw[source] = (raw[source] || 0) + maxSourceReq;
@@ -282,10 +261,23 @@ function resolveExtractions(deficits, mE, mM, bankData) {
                     });
 
                     const t = i18n[currentLang];
-                    let action = t[route.action] || route.action;
-                    let htmlAction = `<strong>${action} <span class="highlight">${maxSourceReq.toLocaleString()} ${t.items[source]|| (source.charAt(0).toUpperCase() + source.slice(1))}</span>`;
+                    
+                    let verbKey = 'verbProcess';
+                    if (route.action === 'stepCrush') verbKey = 'verbCrush';
+                    else if (route.action === 'stepGrind') verbKey = 'verbGrind';
+                    else if (route.action === 'stepExtract') verbKey = 'verbExtract';
+                    else if (route.action === 'stepFurnace' || route.action === 'stepBlastFurnace') verbKey = 'verbSmelt';
+                    else if (route.action === 'stepBake') verbKey = 'verbBake';
+                    
+                    let verb = t[verbKey] || "Process";
+                    let vInMachine = t.inMachine || "in the";
+                    let vWith = t.stepWith || "with";
+
+                    let machine = routeName.split(' (')[0];
+
+                    let htmlAction = `<strong>${verb} <span class="highlight">${maxSourceReq.toLocaleString()} ${t.items[source]||source}</span> ${vInMachine} ${machine}`;
                     if (catQty > 0 && route.cat) {
-                        htmlAction += ` ${t.stepWith} <span class="highlight">${catQty.toLocaleString()} ${t.items[route.cat]|| (route.cat.charAt(0).toUpperCase() + route.cat.slice(1))}</span>`;
+                        htmlAction += ` ${vWith} <span class="highlight">${catQty.toLocaleString()} ${t.items[route.cat]||route.cat}</span>`;
                     }
                     htmlAction += `</strong>`;
 
@@ -294,14 +286,16 @@ function resolveExtractions(deficits, mE, mM, bankData) {
                         mainYields: mainYieldsList,
                         byproducts: bpYieldsList,
                         stepKey: stepKey,
-                        routeStats: routeStats,
+                        routeStats: validReqs,
                         selectedRoute: routeName
                     });
 
                     processing = true;
                     break; 
                 } else {
-                    itemsFromSource.forEach(k => delete raw[k]);
+                    itemsFromSource.forEach(k => {
+                        if (!route.yields[k]) localExtractMap[k] = null; 
+                    });
                     processing = true;
                     break;
                 }

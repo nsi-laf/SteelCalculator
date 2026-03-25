@@ -1,5 +1,11 @@
 const rawKeys = ['granum', 'calx', 'saburra', 'tephra', 'gabore', 'kimurite', 'bor', 'rockoil', 'dragonsalt', 'ichor', 'sulfur', 'tallow'];
-const defaultPrices = { granum: 15, calx: 35, saburra: 15, tephra: 50, gabore: 25, kimurite: 200, bor: 120, rockoil: 50, dragonsalt: 100, ichor: 150, sulfur: 30, tallow: 10 };
+
+const defaultPrices = { 
+    granum: 15, calx: 18, saburra: 15, tephra: 40, gabore: 25, kimurite: 200, 
+    bor: 12, rockoil: 15, dragonsalt: 18, ichor: 15, sulfur: 12, tallow: 10,
+    coal: 15, coke: 18, water: 10, sp: 15, cp: 20, fumingsalt: 15
+};
+
 const GATHERABLE_STONES = ['granum', 'calx', 'saburra', 'tephra', 'gabore', 'kimurite', 'lodestone', 'water'];
 
 const CATEGORIES = [

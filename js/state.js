@@ -1,158 +1,217 @@
-let timer = null;
-let prevMode = 'units';
 let currentLang = 'en';
-let collapsedState = {};
+let marketData = {};
+let pipelineStepsRaw = [];
 let completedSteps = [];
-let pureDeficits = {}; 
-let pipelineStepsRaw = []; 
-let byproductsRaw = {}; 
-let pipelineViewMode = 'overview';
-let marketData = {}; 
 let focusIndex = 0;
+let byproductsRaw = {};
+let pureDeficits = {};
 let userPathChoices = {};
-let globalRoutePref = null; 
-
-let moduleVisibility = {
-    'mod_prodCmd': true, 'mod_yieldMods': true, 'mod_legend': false,
-    'mod_invBank': false, 'mod_marketCart': false, 'mod_defGather': true, 'mod_mfgPipe': true
-};
-let customColors = { accent: null, bg: null, text: null };
+let collapsedState = {};
+let moduleVisibility = {};
+let pipelineViewMode = 'overview';
+let globalRoutePref = null;
+let timer;
+let prevMode = 'units';
 
 function save() {
-    const data = { collapsed: collapsedState, completedSteps: completedSteps, market: marketData, moduleVisibility: moduleVisibility, customColors: customColors, userPathChoices: userPathChoices, globalRoutePref: globalRoutePref };
-    document.querySelectorAll('input:not([type="checkbox"]):not([type="password"]):not([type="color"]), select:not(.step-route-select)').forEach(el => data[el.id] = el.value);
-    document.querySelectorAll('input[type="checkbox"]').forEach(el => data[el.id] = el.checked);
-    data.webhookUrl = document.getElementById('webhookUrl').value;
-    data.theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
-    data.lang = currentLang;
-    localStorage.setItem('QM_Steel_v8', JSON.stringify(data));
+    const isLight = document.body.classList.contains('light-theme');
+    const themeKey = isLight ? 'light' : 'dark';
+    const themeDef = isLight ? defaultColors.light : defaultColors.dark;
+    
+    const cAccent = document.getElementById('colorAccent')?.value || themeDef.accent;
+    const cBg = document.getElementById('colorBg')?.value || themeDef.bg;
+    const cText = document.getElementById('colorText')?.value || themeDef.text;
+
+    const colorsChanged = cAccent.toLowerCase() !== themeDef.accent.toLowerCase() || 
+                          cBg.toLowerCase() !== themeDef.bg.toLowerCase() || 
+                          cText.toLowerCase() !== themeDef.text.toLowerCase();
+
+    let existingData = {};
+    try { existingData = JSON.parse(localStorage.getItem('qm_data') || '{}'); } catch(e) {}
+
+    let customColors = existingData.customColors || {};
+    if (colorsChanged) {
+        customColors[themeKey] = { accent: cAccent, bg: cBg, text: cText };
+    } else {
+        delete customColors[themeKey];
+    }
+
+    const data = {
+        lang: currentLang,
+        market: marketData,
+        bank: {},
+        target: document.getElementById('targetAmount')?.value || 10000,
+        metal: document.getElementById('targetMetal')?.value || 'bleck',
+        crafters: document.getElementById('crafters')?.value || 1,
+        mode: document.getElementById('mode')?.value || 'units',
+        mods: {
+            mast: document.getElementById('modMast')?.checked,
+            ref: document.getElementById('modRef')?.checked,
+            ext: document.getElementById('modExt')?.checked
+        },
+        choices: userPathChoices,
+        collapsed: collapsedState,
+        visibility: moduleVisibility,
+        theme: isLight ? 'light' : 'dark',
+        webhook: document.getElementById('webhookUrl')?.value || '',
+        customColors: customColors
+    };
+    
+    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
+        let el = document.getElementById('b_' + k);
+        if (el) data.bank[k] = el.value;
+    });
+
+    localStorage.setItem('qm_data', JSON.stringify(data));
+    const status = document.getElementById('saveStatus');
+    if(status) {
+        status.innerText = "Saved";
+        setTimeout(() => status.innerText = "Ready", 2000);
+    }
 }
 
 function load() {
-    const d = JSON.parse(localStorage.getItem('QM_Steel_v8'));
-    if (!d) {
-        resetColors();
-        return;
-    }
-    
-    Object.keys(d).forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.id !== 'webhookUrl' && id !== 'collapsed' && id !== 'completedSteps' && id !== 'market' && id !== 'moduleVisibility' && id !== 'customColors' && id !== 'userPathChoices' && id !== 'globalRoutePref') {
-            if(el.type === 'checkbox') el.checked = d[id];
-            else el.value = d[id];
+    try {
+        const raw = localStorage.getItem('qm_data');
+        let isLight = false;
+        
+        if (!raw) {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                isLight = true;
+            }
+        } else {
+            const data = JSON.parse(raw);
+            
+            if (data.lang) currentLang = data.lang;
+            if (data.market) marketData = data.market;
+            if (data.choices) userPathChoices = data.choices;
+            if (data.collapsed) collapsedState = data.collapsed;
+            if (data.visibility) moduleVisibility = data.visibility;
+            if (data.webhook && document.getElementById('webhookUrl')) document.getElementById('webhookUrl').value = data.webhook;
+            
+            if (data.mode) {
+                document.getElementById('mode').value = data.mode;
+                prevMode = data.mode;
+            }
+            
+            if (data.metal) document.getElementById('targetMetal').value = data.metal;
+            if (data.target) document.getElementById('targetAmount').value = data.target;
+            if (data.crafters) document.getElementById('crafters').value = data.crafters;
+            
+            if (data.mods) {
+                document.getElementById('modMast').checked = data.mods.mast;
+                document.getElementById('modRef').checked = data.mods.ref;
+                document.getElementById('modExt').checked = data.mods.ext;
+            }
+
+            if (data.bank) {
+                Object.keys(data.bank).forEach(k => {
+                    let el = document.getElementById('b_' + k);
+                    if (el) el.value = data.bank[k];
+                });
+            }
+
+            if (data.theme) {
+                isLight = data.theme === 'light';
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                isLight = true;
+            }
+
+            Object.keys(collapsedState).forEach(id => {
+                if (collapsedState[id]) {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('collapsed');
+                }
+            });
+
+            Object.keys(moduleVisibility).forEach(id => {
+                toggleMainModule(id, moduleVisibility[id]);
+            });
         }
-    });
-    
-    if (d.market) marketData = d.market;
-    if (d.userPathChoices) userPathChoices = d.userPathChoices;
-    if (d.globalRoutePref) globalRoutePref = d.globalRoutePref;
-    if (d.webhookUrl) document.getElementById('webhookUrl').value = d.webhookUrl;
-    if (d.theme === 'light') document.body.classList.add('light-theme');
-    if (d.lang) currentLang = (d.lang === 'en' || d.lang === 'fr') ? d.lang : 'en';
-    if (d.completedSteps) completedSteps = d.completedSteps;
-    
-    if (d.collapsed) {
-        collapsedState = d.collapsed;
-        Object.keys(collapsedState).forEach(id => {
-            if (collapsedState[id]) {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('collapsed');
-            }
-        });
-    }
+        
+        if (isLight) document.body.classList.add('light-theme');
+        syncColorPickers();
+        if (typeof updateThemeIcon === 'function') updateThemeIcon();
 
-    if (d.moduleVisibility) {
-        moduleVisibility = d.moduleVisibility;
-        Object.keys(moduleVisibility).forEach(modId => {
-            const isVisible = moduleVisibility[modId];
-            const checkboxId = modId.replace('mod_', 'view_');
-            const checkbox = document.getElementById(checkboxId); 
-            if(checkbox) checkbox.checked = isVisible;
-            
-            const el = document.getElementById(modId);
-            if(el) {
-                if(isVisible) el.classList.remove('module-hidden');
-                else el.classList.add('module-hidden');
-            }
-            
-            if(modId === 'mod_invBank') document.getElementById('btnHeaderBank').classList.toggle('active', isVisible);
-            if(modId === 'mod_marketCart') document.getElementById('btnHeaderCart').classList.toggle('active', isVisible);
-        });
+    } catch (e) {
+        console.error("Save load failed", e);
     }
-    
-    if (d.customColors && d.customColors.accent && d.customColors.bg && d.customColors.text) {
-        customColors = d.customColors;
-        document.getElementById('colorAccent').value = customColors.accent;
-        document.documentElement.style.setProperty('--accent', customColors.accent);
-        document.getElementById('colorBg').value = customColors.bg;
-        document.documentElement.style.setProperty('--bg-card', customColors.bg);
-        document.getElementById('colorText').value = customColors.text;
-        document.documentElement.style.setProperty('--text', customColors.text);
-    } else {
-        resetColors();
-    }
-    
-    prevMode = document.getElementById('mode').value || 'units';
-
-    if (globalRoutePref === 'efficient') document.getElementById('btnPrefEfficient')?.classList.add('active-global');
-    if (globalRoutePref === 'yield') document.getElementById('btnPrefYield')?.classList.add('active-global');
 }
 
 function clearAll() {
-    if(confirm(i18n[currentLang].resetPrompt)) {
-        document.querySelectorAll('input[id^="b_"]').forEach(el => el.value = 0);
-        Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => marketData[k] = [{ p: defaultPrices[k] || 0, q: 0 }]);
-        document.getElementById('targetAmount').value = document.getElementById('mode').value === 'stacks' ? 1 : 10000;
-        completedSteps = [];
-        closeModal('settingsModal');
-        closeModal('actionsModal');
-        renderMarketTable();
-        handlePipelineChange();
-    }
+    if (!confirm(i18n[currentLang].resetPrompt || "Reset all inventory values and shopping cart to zero?")) return;
+    
+    Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
+        let el = document.getElementById('b_' + k);
+        if (el) el.value = 0;
+        
+        let p = defaultPrices[k];
+        if (!p) p = (k === 'tephra') ? 40 : 15;
+        marketData[k] = [{ p: p, q: 0 }];
+    });
+    
+    document.getElementById('targetAmount').value = 10000;
+    userPathChoices = {};
+    completedSteps = [];
+    
+    renderBankTable();
+    renderMarketTable();
+    targetMetalChanged();
 }
 
 function generateShareCode() {
-    let state = { b: {}, m: {}, s: {}, c: userPathChoices };
+    const data = {
+        m: document.getElementById('targetMetal').value,
+        t: document.getElementById('targetAmount').value,
+        b: {},
+        mk: {}
+    };
+    
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
-        let v = Number(document.getElementById('b_'+k)?.value);
-        if (v) state.b[k] = v;
+        const bVal = Number(document.getElementById('b_' + k)?.value) || 0;
+        if (bVal > 0) data.b[k] = bVal;
+        
+        if (marketData[k]) {
+            let activeTiers = marketData[k].filter(tier => tier.q > 0);
+            if (activeTiers.length > 0) data.mk[k] = activeTiers;
+        }
     });
-    
-    state.m = marketData;
-    state.s.t = document.getElementById('targetMetal').value;
-    state.s.a = document.getElementById('targetAmount').value;
-    state.s.c = document.getElementById('crafters').value;
-    state.s.m = document.getElementById('mode').value;
-    
-    const code = btoa(JSON.stringify(state));
-    document.getElementById('shareCode').value = code;
-    navigator.clipboard.writeText(code);
-    alert(i18n[currentLang].exportSuccess || "Code copied to clipboard!");
+
+    const str = btoa(JSON.stringify(data));
+    document.getElementById('shareCode').value = str;
+    navigator.clipboard.writeText(str);
+    alert(i18n[currentLang].exportSuccess || "Copied!");
 }
 
 function loadShareCode() {
     try {
-        const code = document.getElementById('shareCode').value.trim();
-        if (!code) return;
-        const state = JSON.parse(atob(code));
+        const str = document.getElementById('shareCode').value;
+        if (!str) return;
         
-        document.querySelectorAll('input[id^="b_"]').forEach(el => el.value = 0);
-        if (state.b) Object.keys(state.b).forEach(k => { const el = document.getElementById('b_'+k); if(el) el.value = state.b[k]; });
-        if (state.m) marketData = state.m;
-        if (state.c) userPathChoices = state.c;
+        const data = JSON.parse(atob(str));
         
-        if (state.s) {
-            if(state.s.t) document.getElementById('targetMetal').value = state.s.t;
-            if(state.s.a) document.getElementById('targetAmount').value = state.s.a;
-            if(state.s.c) document.getElementById('crafters').value = state.s.c;
-            if(state.s.m) {
-                document.getElementById('mode').value = state.s.m;
-                prevMode = state.s.m;
+        if (data.m) document.getElementById('targetMetal').value = data.m;
+        if (data.t) document.getElementById('targetAmount').value = data.t;
+        
+        Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
+            let el = document.getElementById('b_' + k);
+            if (el) el.value = data.b[k] || 0;
+            
+            if (data.mk && data.mk[k]) {
+                marketData[k] = data.mk[k];
+            } else {
+                let p = defaultPrices[k] || 15;
+                marketData[k] = [{ p: p, q: 0 }];
             }
-        }
-        save(); renderBankTable(); renderMarketTable(); handlePipelineChange();
-        alert(i18n[currentLang].importSuccess || "Setup loaded successfully!");
-    } catch(e) {
-        alert(i18n[currentLang].importError || "Invalid code provided.");
+        });
+        
+        renderBankTable();
+        renderMarketTable();
+        targetMetalChanged();
+        alert(i18n[currentLang].importSuccess || "Loaded!");
+        document.getElementById('shareCode').value = '';
+        closeModal('settingsModal');
+    } catch (e) {
+        alert(i18n[currentLang].importError || "Invalid code!");
     }
 }
