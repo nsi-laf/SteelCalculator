@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jaegh's Refining Suite - MO2 Logistics</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0f12">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+<div class="app-header">
+    <div class="header-actions">
+        <button onclick="toggleMainModule('mod_invBank')" id="btnHeaderBank" class="btn-header">🏦 <span id="ui_btnBank">Bank</span></button>
+        <button onclick="toggleMainModule('mod_marketCart')" id="btnHeaderCart" class="btn-header">🛒 <span id="ui_btnCart">Cart</span></button>
+        <button onclick="openModal('actionsModal')" class="btn-header">⚡ <span id="ui_btnActions">Actions</span></button>
+        <button onclick="openModal('settingsModal')" class="btn-header">⚙️ <span id="ui_btnSettings">Settings</span></button>
+        <button onclick="openModal('helpModal')" class="btn-header">❓ <span id="ui_btnHelp">Help</span></button>
+    </div>
+    <h1 class="app-title">Quartermaster Command</h1>
+    <div class="app-subtitle">REFINING SUITE • MADE BY [MTM] JAEGH</div>
+</div>
+
+<div id="actionsModal" class="modal">
+    <div class="modal-content module" style="padding: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <h3 style="margin:0; color:var(--accent);" id="ui_modalActionsTitle">Pipeline Actions</h3>
+            <span class="close" onclick="closeModal('actionsModal')">&times;</span>
+        </div>
+        
+        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+            <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_actCart">Cart & Inventory Actions</label>
+            <button class="btn-max" id="ui_btnMaxText" onclick="calculateMax(); closeModal('actionsModal');" style="margin-top: 0; margin-bottom: 10px;">⚡ Calculate Craftable From Inventory</button>
+            <button class="btn-dispatch" id="ui_btnAutoFill" style="background:var(--accent); color:#000;" onclick="autoFillCart(); closeModal('actionsModal');">🛒 Auto-Fill Cart</button>
+            <button class="btn-dispatch" id="ui_btnClearCart" style="background:var(--bg-input); border:1px solid var(--border); color:var(--text);" onclick="clearCart(); closeModal('actionsModal');">🧹 Clear Cart</button>
+        </div>
+        
+        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+            <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_actDiscord">Discord Dispatch</label>
+            <input type="password" id="webhookUrl" class="webhook-input" placeholder="https://discord.com/api/webhooks/..." onchange="save()" style="margin-bottom: 8px;">
+            <button class="btn-dispatch" id="ui_btnSend" onclick="sendToDiscord()">🚀 Send Order to Discord</button>
+            <button class="btn-dispatch" id="ui_btnDiscord" onclick="copyDiscord()" style="background: var(--border); color: var(--text);">📋 Copy to Clipboard</button>
+        </div>
+
+        <div>
+            <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_actPipe">Pipeline Control</label>
+            <button class="btn-dispatch btn-danger" id="ui_btnRestart" onclick="restartPipeline(); closeModal('actionsModal');" style="margin-top: 0;">🔄 Restart Pipeline</button>
+        </div>
+    </div>
+</div>
+
+<div id="helpModal" class="modal">
+    <div class="modal-content module" style="padding: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <h3 style="margin:0; color:var(--accent);">Quartermaster Command</h3>
+            <span class="close" onclick="closeModal('helpModal')">&times;</span>
+        </div>
+        <div class="help-content">
+            <p style="margin-top: 0;" id="ui_helpSubtitle">The ultimate MO2 manufacturing calculator and logistics dashboard.</p>
+            <h3 id="ui_helpFeatures">🌟 Feature Overview</h3>
+            <ul>
+                <li id="ui_helpFeat1"></li>
+                <li id="ui_helpFeat2"></li>
+                <li id="ui_helpFeat3"></li>
+                <li id="ui_helpFeat4"></li>
+                <li id="ui_helpFeat5"></li>
+            </ul>
+            <h3 id="ui_helpHowTo">📖 How to Use</h3>
+            <ol>
+                <li id="ui_helpHow1"></li>
+                <li id="ui_helpHow2"></li>
+                <li id="ui_helpHow3"></li>
+                <li id="ui_helpHow4"></li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content module" style="padding: 0;">
+        <div class="modal-tabs">
+            <button class="tab-btn active" id="tabBtn_prefs" onclick="switchTab('prefs')">⚙️ <span id="ui_tabPrefs">Preferences</span></button>
+            <button class="tab-btn" id="tabBtn_view" onclick="switchTab('view')">👁️ <span id="ui_tabView">View</span></button>
+            <button class="tab-btn" id="tabBtn_data" onclick="switchTab('data')">💾 <span id="ui_tabData">Data</span></button>
+            <span class="close" onclick="closeModal('settingsModal')" style="padding: 10px 15px;">&times;</span>
+        </div>
+
+        <div id="tab_prefs" class="tab-content active" style="padding: 15px;">
+            <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+                <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_yieldMods">Yield Modifiers</label>
+                <div class="input-row"><label id="ui_mastery">Mastery (+6%)</label><input type="checkbox" id="modMast" onchange="run()" checked></div>
+                <div class="input-row"><label id="ui_refining">Refining (+3%)</label><input type="checkbox" id="modRef" onchange="run()" checked></div>
+                <div class="input-row"><label id="ui_extraction">Extraction (+3%)</label><input type="checkbox" id="modExt" onchange="run()" checked></div>
+            </div>
+
+            <div>
+                <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_prefRoute">Global Routing Preference</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-route" id="btnPrefEfficient" onclick="toggleGlobalPref('efficient')" style="width: 100%; justify-content: center; padding: 10px; font-size:12px;">⭐ <span id="ui_legBest">Most Efficient</span></button>
+                    <button class="btn-route" id="btnPrefYield" onclick="toggleGlobalPref('yield')" style="width: 100%; justify-content: center; padding: 10px; font-size:12px;">💎 <span id="ui_legMax">Max Byproducts</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab_view" class="tab-content" style="padding: 15px; display: none;">
+            <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+                <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_viewPers">Personalization</label>
+                <div class="input-row">
+                    <label id="ui_viewLang">Language</label>
+                    <select id="lang" onchange="changeLang()" style="width: 160px;">
+                        <option value="en" selected>English</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
+                <div class="input-row"><label id="ui_format">Display Format</label>
+                    <select id="mode" onchange="handleModeChange()" style="width: 160px;">
+                        <option value="units" id="ui_optUnits">Units</option>
+                        <option value="stacks" id="ui_optStacks">Stacks (10k)</option>
+                    </select>
+                </div>
+                <div class="input-row"><label id="ui_colorAccent">Primary Color</label><input type="color" id="colorAccent" onchange="applyColors()"></div>
+                <div class="input-row"><label id="ui_colorBg">Secondary Color</label><input type="color" id="colorBg" onchange="applyColors()"></div>
+                <div class="input-row"><label id="ui_colorText">Text Color</label><input type="color" id="colorText" onchange="applyColors()"></div>
+                
+                <div style="display:flex; gap:10px; margin-top: 10px;">
+                    <button class="btn-theme" id="ui_btnResetColors" onclick="resetColors()" style="margin: 0; flex:1;">Reset Colors</button>
+                    <button class="btn-theme" id="ui_themeToggle" onclick="toggleTheme()" style="margin: 0; flex:1;">☀️ / 🌙</button>
+                </div>
+            </div>
+            
+            <div>
+                <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px; display: block;" id="ui_viewVis">Module Visibility</label>
+                <div class="input-row" style="justify-content: flex-start; gap: 10px;"><input type="checkbox" id="view_prodCmd" onchange="toggleMainModule('mod_prodCmd', this.checked)" checked> <label id="ui_viewProd">Production Command</label></div>
+                <div class="input-row" style="justify-content: flex-start; gap: 10px;"><input type="checkbox" id="view_legend" onchange="toggleMainModule('mod_legend', this.checked)" checked> <label id="ui_viewLegend">Acronym Legend</label></div>
+                <div class="input-row" style="justify-content: flex-start; gap: 10px;"><input type="checkbox" id="view_defGather" onchange="toggleMainModule('mod_defGather', this.checked)" checked> <label id="ui_viewGather">Deficit to Gather</label></div>
+                <div class="input-row" style="justify-content: flex-start; gap: 10px;"><input type="checkbox" id="view_mfgPipe" onchange="toggleMainModule('mod_mfgPipe', this.checked)" checked> <label id="ui_viewPipe">Manufacturing Pipeline</label></div>
+            </div>
+        </div>
+
+        <div id="tab_data" class="tab-content" style="padding: 15px; display: none;">
+            <div style="margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+                <label id="ui_shareTitle" style="font-weight:bold; color:var(--accent); text-transform: uppercase;">Share / Import Setup</label>
+                <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 10px 0;" id="ui_shareDesc">Generate a code to share your current bank, market cart, and target with others, or paste a code to load theirs.</p>
+                <textarea id="shareCode" style="width: 100%; height: 60px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 8px; font-family: monospace; font-size: 11px; resize: none; box-sizing: border-box; margin-bottom: 10px;" placeholder="Paste code here..."></textarea>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-dispatch" id="ui_btnGenCode" onclick="generateShareCode()" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text);">📤 Generate & Copy</button>
+                    <button class="btn-dispatch" id="ui_btnLoadCode" onclick="loadShareCode()" style="background: var(--accent); color: #000;">📥 Load Code</button>
+                </div>
+            </div>
+
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 0;" id="ui_resetDesc">Clear all your saved bank inventory, market cart quantities, and targets.</p>
+            <button class="btn-dispatch btn-danger" id="ui_btnReset" onclick="clearAll(); closeModal('settingsModal');">🧹 Reset All Bank & Cart</button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard">
+    <div class="sidebar">
+
+        <div class="module" id="mod_prodCmd">
+            <div class="module-header" onclick="toggleCollapse('mod_prodCmd')">
+                <span id="ui_prodCmd">Production Command</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="module-body">
+                <div class="input-row" style="margin-bottom: 12px;">
+                    <label id="ui_targetMetalLabel">Target Resource</label>
+                    <select id="targetMetal" onchange="run()" style="font-weight: bold; color: var(--accent); width: 160px;">
+                        <optgroup label="Refined Metals">
+                            <option value="bron">Bron</option>
+                            <option value="messing">Messing</option>
+                            <option value="messing_bor">Messing (Bor)</option>
+                            <option value="tmessing">Tindremic Messing</option>
+                            <option value="steel" selected>Steel</option>
+                            <option value="tungsteel">Tungsteel</option>
+                            <option value="cronite">Cronite</option>
+                            <option value="oghmium">Oghmium</option>
+                        </optgroup>
+                        <optgroup label="Catalysts & Intermediates">
+                            <option value="coal">Coal</option>
+                            <option value="coke">Coke</option>
+                            <option value="sp">Saburra Powder</option>
+                            <option value="cp">Calx Powder</option>
+                            <option value="pi">Pig Iron</option>
+                            <option value="gs">Grain Steel</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label id="ui_target">Amount</label>
+                    <input type="number" id="targetAmount" value="10000" style="width: 160px;" oninput="run()">
+                </div>
+                <div class="input-row">
+                    <label id="ui_crafters">Crafters</label>
+                    <input type="number" id="crafters" value="1" style="width: 160px;" oninput="run()">
+                </div>
+            </div>
+        </div>
+
+        <div class="module" id="mod_legend">
+            <div class="module-header" onclick="toggleCollapse('mod_legend')">
+                <span id="ui_legend">Acronym Legend</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="module-body" style="font-size: 11px; color: var(--text-dim);">
+                <div style="margin-bottom:4px;" id="ui_legCP">CP = Calx Powder</div>
+                <div style="margin-bottom:4px;" id="ui_legSP">SP = Saburra Powder</div>
+                <div style="margin-bottom:4px;" id="ui_legBO">BO = Blood Ore</div>
+                <div style="margin-bottom:4px;" id="ui_legPI">PI = Pig Iron</div>
+                <div style="margin-bottom:4px;" id="ui_legGS">GS = Grain Steel</div>
+                <div style="margin-bottom:8px;" id="ui_legStk">Stk = Stack (10,000 units)</div>
+                
+                <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="margin-bottom:4px;" id="ui_legBestTxt">⭐ = Most Efficient</div>
+                    <div style="margin-bottom:4px;" id="ui_legMaxTxt">💎 = Max Byproducts</div>
+                    <div style="margin-bottom:4px;" id="ui_legRegionTxt">🌍 = Region Locked</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="saveStatus" style="text-align:center; font-size:11px; color:var(--text-dim);">Ready</div>
+    </div>
+
+    <div class="main">
+        <div class="module module-hidden" id="mod_invBank">
+            <div class="module-header" onclick="toggleCollapse('mod_invBank')">
+                <span id="ui_invBank">Inventory Bank</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="module-body">
+                <div style="text-align: right; margin-bottom: 8px;">
+                    <label style="font-size: 11px; color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center;">
+                        <input type="checkbox" id="showAllBank" onchange="run()"> 
+                        <span id="ui_showAllBank">Show All Materials</span>
+                    </label>
+                </div>
+                <table class="data-table" id="bankTable"></table>
+            </div>
+        </div>
+
+        <div class="module module-hidden" id="mod_marketCart">
+            <div class="module-header" onclick="toggleCollapse('mod_marketCart')">
+                <span>
+                    <span id="ui_marketCart">Market Cart</span> 
+                </span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="module-body" id="marketContainer"></div>
+        </div>
+
+        <div class="module" id="mod_defGather">
+            <div class="module-header" onclick="toggleCollapse('mod_defGather')">
+                <span><span id="ui_defGather">Deficit to Gather Manually</span> <span style="font-size:10px; color:var(--text-dim); text-transform:none; margin-left: 8px;">(<span id="statStacks">0.00</span> Stacks Total)</span></span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="module-body" id="gatherOutput" class="logistics-grid"></div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="projectProgress" style="width: 0%;"></div>
+            <div class="progress-text" id="projectProgressText">0% Pipeline Completed</div>
+        </div>
+
+        <div class="module" id="mod_mfgPipe">
+            <div class="module-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><span id="ui_mfgPipe">Manufacturing Pipeline</span></span>
+                <div class="view-toggles">
+                    <button class="btn-mini active" id="btnOverview" onclick="setPipelineView('overview')">📄 Overview</button>
+                    <button class="btn-mini" id="btnFocus" onclick="setPipelineView('focus')">🎯 Focus</button>
+                </div>
+            </div>
+            <div class="module-body" style="position:relative;">
+                <div id="focusNav" style="display:none; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border);">
+                    <button class="btn-cart" onclick="navFocus(-1)" style="width:auto; padding: 0 12px;">◀ Prev</button>
+                    <span id="focusProgressText" style="font-weight:bold; font-size:12px; color:var(--accent);">Step 1 of X</span>
+                    <button class="btn-cart" onclick="navFocus(1)" style="width:auto; padding: 0 12px;">Next ▶</button>
+                </div>
+                <div id="stepsOutput"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-footer">
+    © 2026 Made by [MTM] Jaegh for MERCANTORM guild.<br>
+    <i>"Steel wins battles, silver wins wars"</i>
+</div>
+
+<script src="js/lang.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/market_bank.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/discord.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
