@@ -6,8 +6,6 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-323330?style=flat&logo=javascript&logoColor=F7DF1E)
 ![PWA](https://img.shields.io/badge/PWA-Ready-success)
 
-https://isjaegh.github.io/QuartermasterCommand/
-
 **Quartermaster Command** is the ultimate manufacturing calculator and logistics dashboard for **Mortal Online 2**. Designed for guild quartermasters, gatherers, and master crafters, this suite handles complex extraction math, market budgeting, and work-order dispatching in a sleek, offline-capable interface.
 
 🇬🇧 **English** | [🇫🇷 **Français (#fr)**](#-version-française)

@@ -12,6 +12,10 @@
     --hm-none: #444;
     --hm-low: #ffd700;
     --hm-high: #ff4500;
+    /* Route Colors */
+    --c-eff: #00bcd4;
+    --c-max: #9c27b0;
+    --c-reg: #ff9800;
 }
 
 .light-theme {
@@ -28,11 +32,11 @@
     --hm-none: #9ca3af;
     --hm-low: #d97706;
     --hm-high: #dc2626;
+    /* Route Colors */
+    --c-eff: #008ba3;
+    --c-max: #7b1fa2;
+    --c-reg: #e65100;
 }
-
-    .light-theme .btn-stack, .light-theme .btn-max {
-        color: #ffffff;
-    }
 
     .light-theme .bank-category {
         background: rgba(0, 0, 0, 0.05);
@@ -100,25 +104,67 @@ body {
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 15px;
     width: 100%;
 }
 
-.btn-header {
-    background: var(--bg-card);
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: 0.2s;
+/* Theme Toggle Switch */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
     font-weight: bold;
+    color: var(--text-dim);
 }
 
-    .btn-header:hover, .btn-header.active {
-        color: var(--accent);
-        border-color: var(--accent);
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+}
+
+    .theme-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    transition: .2s;
+    border-radius: 20px;
+}
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 3px;
+        bottom: 3px;
+        background-color: var(--text-dim);
+        transition: .2s;
+        border-radius: 50%;
+    }
+
+.theme-switch input:checked + .slider {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+    .theme-switch input:checked + .slider:before {
+        transform: translateX(16px);
+        background-color: #000;
     }
 
 .lang-flags {
@@ -394,7 +440,29 @@ input, select {
         border-color: var(--accent);
     }
 
-/* --- Uniform Action Buttons --- */
+/* --- Uniform Hollow Action Buttons --- */
+.btn-header, .btn-stack, .btn-clear, .btn-cart, .btn-sq, .btn-mini, .btn-dispatch, .btn-route, .btn-theme {
+    background: var(--bg-input) !important;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    transition: all 0.2s ease-in-out;
+    box-sizing: border-box;
+    cursor: pointer;
+    font-family: inherit;
+    margin: 0;
+}
+
+/* Light Theme overrides for hollow buttons */
+.light-theme .btn-header, .light-theme .btn-stack, .light-theme .btn-clear, .light-theme .btn-cart, .light-theme .btn-sq, .light-theme .btn-mini, .light-theme .btn-dispatch, .light-theme .btn-route, .light-theme .btn-theme {
+    background: var(--bg-card) !important;
+}
+
+    .light-theme .btn-header:hover, .light-theme .btn-stack:hover, .light-theme .btn-cart:hover, .light-theme .btn-sq:hover, .light-theme .btn-mini:hover, .light-theme .btn-dispatch:hover, .light-theme .btn-route:hover, .light-theme .btn-theme:hover, .light-theme .btn-header.active, .light-theme .btn-mini.active, .light-theme .btn-route.active {
+        background: var(--accent) !important;
+        color: #fff !important;
+    }
+
+/* Base structural sizes */
 .btn-stack, .btn-clear, .btn-cart, .btn-sq {
     height: 30px;
     display: inline-flex;
@@ -403,53 +471,7 @@ input, select {
     vertical-align: middle;
     border-radius: 2px;
     font-weight: bold;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition: filter 0.2s, border-color 0.2s, color 0.2s;
-    margin: 0;
 }
-
-.btn-stack {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    font-size: 11px;
-    padding: 0 8px;
-    min-width: 50px;
-}
-
-    .btn-stack:hover {
-        filter: brightness(1.2);
-    }
-
-.btn-clear {
-    background: var(--danger);
-    color: white;
-    border: none;
-    font-size: 10px;
-    padding: 0 8px;
-}
-
-    .btn-clear:hover {
-        filter: brightness(1.2);
-    }
-
-.btn-clear-bank {
-    width: 60px;
-}
-
-.btn-cart {
-    background: var(--bg-input);
-    color: var(--text);
-    border: 1px solid var(--border);
-    font-size: 11px;
-    padding: 0 8px;
-}
-
-    .btn-cart:hover {
-        border-color: var(--accent);
-        color: var(--accent);
-    }
 
 .btn-sq {
     width: 30px !important;
@@ -457,65 +479,35 @@ input, select {
     font-size: 14px;
 }
 
-.btn-dispatch {
-    background: #5865F2;
-    color: white;
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 5px;
-    border: none;
-    border-radius: 2px;
-    cursor: pointer;
+.btn-stack {
+    font-size: 11px;
+    padding: 0 8px;
+    min-width: 50px;
+}
+
+.btn-clear {
+    font-size: 10px;
+    padding: 0 8px;
+}
+
+.btn-cart {
+    font-size: 11px;
+    padding: 0 8px;
+}
+
+.btn-header {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
     font-weight: bold;
-    font-size: 13px;
-    transition: 0.2s;
-    display: block;
-    text-align: center;
 }
 
-    .btn-dispatch:hover {
-        filter: brightness(1.1);
-    }
-
-.btn-danger {
-    background: var(--danger);
-    color: white;
-}
-
-.btn-theme {
-    background: var(--border);
-    color: var(--text);
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--accent);
-    cursor: pointer;
-    font-weight: bold;
-    height: auto;
-}
-
-    .btn-theme:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        filter: grayscale(100%);
-    }
-
-.view-toggles {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-}
-
-.btn-mini {
-    background: var(--bg-input);
-    color: var(--text-dim);
-    border: 1px solid var(--border);
+/* The Route & Mini buttons matched perfectly */
+.btn-mini, .btn-route {
     padding: 4px 8px;
     font-size: 10px;
     text-transform: uppercase;
-    cursor: pointer;
     border-radius: 2px;
-    transition: 0.2s;
     height: 26px;
     display: inline-flex;
     align-items: center;
@@ -523,32 +515,127 @@ input, select {
     font-weight: bold;
 }
 
-    .btn-mini.btn-danger {
-        background: var(--danger);
-        color: white;
-        border-color: var(--danger);
+.btn-dispatch {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 5px;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: 13px;
+    display: block;
+    text-align: center;
+}
+
+.btn-theme {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    height: auto;
+}
+
+    /* Hover States (Fills in with color, text turns black) */
+    .btn-header:hover, .btn-stack:hover, .btn-cart:hover, .btn-sq:hover, .btn-mini:hover, .btn-dispatch:hover, .btn-route:hover, .btn-theme:hover {
+        background: var(--accent) !important;
+        color: #000 !important;
     }
 
-        .btn-mini.btn-danger:hover {
-            filter: brightness(1.2);
-            color: white;
-            border-color: var(--danger);
-        }
+/* Active States */
+.btn-header.active, .btn-mini.active, .btn-route.active {
+    background: var(--accent) !important;
+    color: #000 !important;
+    font-weight: bold;
+}
 
-    .btn-mini.active, .btn-mini.active-global {
-        background: var(--accent);
-        color: #000;
-        border-color: var(--accent);
+/* Universal Color Modifiers (Danger, Success, Discord) */
+.btn-success {
+    color: var(--success) !important;
+    border-color: var(--success) !important;
+}
+
+    .btn-success:hover {
+        background: var(--success) !important;
+        color: #fff !important;
     }
 
-    .btn-mini:hover {
-        border-color: var(--accent);
-        color: var(--accent);
+.btn-danger, .btn-clear {
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+}
+
+    .btn-danger:hover, .btn-clear:hover {
+        background: var(--danger) !important;
+        color: #fff !important;
     }
 
-    .btn-mini.active:hover, .btn-mini.active-global:hover {
-        color: #000;
+.btn-discord {
+    color: #5865F2 !important;
+    border-color: #5865F2 !important;
+}
+
+    .btn-discord:hover {
+        background: #5865F2 !important;
+        color: #fff !important;
     }
+
+/* --- COLOR CODED ROUTE CLASSES --- */
+.rt-eff {
+    border-color: var(--c-eff) !important;
+    color: var(--c-eff) !important;
+}
+
+    .rt-eff:hover, .rt-eff.active {
+        background: var(--c-eff) !important;
+        color: #fff !important;
+        border-color: var(--c-eff) !important;
+    }
+
+.rt-max {
+    border-color: var(--c-max) !important;
+    color: var(--c-max) !important;
+}
+
+    .rt-max:hover, .rt-max.active {
+        background: var(--c-max) !important;
+        color: #fff !important;
+        border-color: var(--c-max) !important;
+    }
+
+.rt-reg {
+    border-color: var(--c-reg) !important;
+    color: var(--c-reg) !important;
+}
+
+    .rt-reg:hover, .rt-reg.active {
+        background: var(--c-reg) !important;
+        color: #fff !important;
+        border-color: var(--c-reg) !important;
+    }
+
+/* Multi-class handling for Max + Reg */
+.rt-max.rt-reg {
+    border-color: var(--c-reg) !important;
+    color: var(--c-reg) !important;
+    box-shadow: inset 4px 0 0 var(--c-max);
+}
+
+    .rt-max.rt-reg:hover, .rt-max.rt-reg.active {
+        background: var(--c-reg) !important;
+        color: #fff !important;
+        box-shadow: inset 4px 0 0 #fff;
+    }
+
+.btn-theme:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+.view-toggles {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
 
 .bank-category {
     background: rgba(255,255,255,0.05);
@@ -560,38 +647,38 @@ input, select {
     letter-spacing: 1px;
 }
 
-/* Grid Table Alignments */
-.market-row {
-    display: grid;
-    grid-template-columns: 1fr 0.8fr 2.5fr 0.8fr 0.8fr;
+/* Market Card layout styles (Replaces grid logic) */
+.market-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    padding: 12px;
+}
+
+.market-card-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 5px;
-    padding: 4px 0;
-    border-bottom: 1px dashed var(--border);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
 }
 
-    .market-row:last-child {
-        border-bottom: none;
-    }
-
-.market-header {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 6px;
-    border-bottom-style: solid;
+.market-tier-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
 }
 
-    .market-header.desktop-only {
-        position: sticky;
-        top: 0;
-        background: var(--bg-card);
-        z-index: 5;
-        margin-top: -15px;
-        padding-top: 15px;
+    .market-tier-row + .market-tier-row {
+        border-top: 1px dashed var(--border);
     }
 
+/* Grid Table Alignments for Bank (Kept as is for 1-tier simplicity) */
 .bank-row {
     display: grid;
     grid-template-columns: 1fr 1.5fr;
@@ -689,31 +776,6 @@ input, select {
     margin-top: 8px;
 }
 
-.btn-route {
-    background: var(--bg-input);
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-    padding: 4px 8px;
-    font-size: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: 0.2s;
-    display: inline-flex;
-    align-items: center;
-}
-
-    .btn-route:hover {
-        border-color: var(--accent);
-        color: var(--text);
-    }
-
-    .btn-route.active {
-        background: rgba(212, 175, 55, 0.1);
-        border-color: var(--accent);
-        color: var(--accent);
-        font-weight: bold;
-    }
-
 #stepsOutput.focus-mode .step-card {
     display: none;
 }
@@ -803,19 +865,19 @@ input, select {
         color: var(--accent);
     }
 
-/* Return to top button */
+/* Return to top button - Solid Background Restored */
 .btn-return-top {
     position: fixed;
     bottom: 25px;
     right: 25px;
     display: none;
-    background: var(--accent);
-    color: #000;
-    border: 2px solid var(--border);
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    font-size: 16px;
+    background: var(--accent) !important;
+    color: #000 !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 50% !important;
+    width: 45px !important;
+    height: 45px !important;
+    font-size: 16px !important;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     z-index: 1000;
@@ -823,6 +885,7 @@ input, select {
     align-items: center;
     justify-content: center;
     line-height: 1;
+    padding: 0 !important;
 }
 
     .btn-return-top:hover {
@@ -856,7 +919,7 @@ input, select {
         bottom: 50px;
     }
 
-/* UPDATED: Mobile handling with constraints resolving Tetris effect & Modal edges */
+/* Mobile handling with constraints resolving Tetris effect & Modal edges */
 @media (max-width: 650px) {
     .header-actions {
         justify-content: center;
@@ -883,14 +946,12 @@ input, select {
         display: none !important;
     }
 
-    /* Ensure modal borders are cleanly fitting for mobile */
     .modal-content {
         width: 95%;
         margin: 5% auto;
     }
 
-    /* Fix the Tetris Effect */
-    .market-row, .bank-row {
+    .bank-row {
         display: flex;
         flex-direction: column;
         background: rgba(0,0,0,0.05);
@@ -901,7 +962,7 @@ input, select {
         row-gap: 8px;
     }
 
-        .market-row > div:nth-child(1), .bank-row > div:nth-child(1) {
+        .bank-row > div:nth-child(1) {
             font-size: 1.2em;
             border-bottom: 1px solid var(--border);
             padding-bottom: 6px;
@@ -910,8 +971,7 @@ input, select {
             width: 100%;
         }
 
-        /* Center the increment buttons appropriately and stop them stretching */
-        .market-row > div, .bank-row > div {
+        .bank-row > div {
             text-align: left !important;
             display: flex;
             flex-direction: column;
@@ -920,15 +980,14 @@ input, select {
             width: 100%;
         }
 
-            .market-row > div > div, .bank-row > div > div {
+            .bank-row > div > div {
                 display: flex;
                 flex-wrap: nowrap;
                 gap: 6px;
                 width: 100%;
             }
 
-        /* Make numeric inputs stretch comfortably but buttons remain square */
-        .market-row input, .bank-row input {
+        .market-tier-row input, .bank-row input {
             flex-grow: 1;
             min-width: 40px;
             margin: 0;

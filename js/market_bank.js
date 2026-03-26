@@ -56,19 +56,36 @@ function quickSubMarket(k, idx) {
     handlePipelineChange();
 }
 
-function autoFillCart() { 
+function autoFillMarketItem(k) {
+    const mode = document.getElementById('mode').value;
+    let needed = pureDeficits[k] || 0;
+    let defaultP = defaultPrices[k];
+    if (!defaultP) defaultP = (k === 'tephra') ? 40 : 15;
+
+    let currentP = marketData[k]?.[0]?.p || defaultP;
+
+    marketData[k] = [{
+        p: currentP,
+        q: mode === 'stacks' ? parseFloat((needed / 10000).toFixed(4)) : needed
+    }];
+
+    renderMarketTable();
+    handlePipelineChange();
+}
+
+function autoFillCart() {
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         const mode = document.getElementById('mode').value;
         let needed = pureDeficits[k] || 0;
         let defaultP = defaultPrices[k];
         if (!defaultP) defaultP = (k === 'tephra') ? 40 : 15;
-        marketData[k] = [{ 
-            p: marketData[k]?.[0]?.p || defaultP, 
-            q: mode === 'stacks' ? parseFloat((needed / 10000).toFixed(4)) : needed 
+        marketData[k] = [{
+            p: marketData[k]?.[0]?.p || defaultP,
+            q: mode === 'stacks' ? parseFloat((needed / 10000).toFixed(4)) : needed
         }];
     });
     renderMarketTable();
-    handlePipelineChange(); 
+    handlePipelineChange();
     closeModal('cartModal');
 }
 
@@ -78,69 +95,78 @@ function renderMarketTable() {
     const t = i18n[currentLang] || i18n['en'];
     const addLabel = document.getElementById('mode').value === 'stacks' ? (t.qAddStk || '+1 Stk') : (t.qAdd || '+10k');
     const subLabel = document.getElementById('mode').value === 'stacks' ? (t.qSubStk || '-1 Stk') : (t.qSub || '-10k');
-    
-    let html = `<div class="market-row market-header desktop-only"><div></div><div style="text-align:center">${t.tblPrice || 'Price'}</div><div style="text-align:center">${t.tblBuy || 'Buy'}</div><div style="text-align:right">${t.tblCost || 'Cost'}</div><div style="text-align:right">${t.tblStash || 'Stash'}</div></div>`; 
+
+    let html = ``;
 
     CATEGORIES.forEach(cat => {
         html += `<div id="m_cat_${cat.id}" style="display:none;"><div class="bank-category" style="margin-top:10px; margin-bottom:5px;">${(t.categories && t.categories[cat.id]) ? t.categories[cat.id] : cat.id}</div>`;
 
         cat.items.forEach(k => {
-            if(!marketData[k]) return;
+            if (!marketData[k]) return;
             const tiers = marketData[k];
-            let priceHtml = '';
-            let buyHtml = '';
+            let tiersHtml = '';
 
             tiers.forEach((tier, idx) => {
-                let mb = idx < tiers.length - 1 ? '4px' : '0';
-                
-                priceHtml += `<div style="margin-bottom: ${mb}; display: flex; align-items: center; justify-content: center;">
-                    <input type="number" style="width: 85px; margin: 0;" value="${tier.p}" title="Price" oninput="updateMarketTier('${k}', ${idx}, 'p', this.value)">
-                </div>`;
-                
-                buyHtml += `<div style="display:flex; gap: 4px; margin-bottom: ${mb}; justify-content: center; align-items: center; flex-wrap: wrap;">
-                    <button class="btn-stack q-sub" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickSubMarket('${k}', ${idx})">${subLabel}</button>
-                    <input type="number" style="width: 95px; margin: 0;" value="${tier.q}" title="Qty" oninput="updateMarketTier('${k}', ${idx}, 'q', this.value)">
-                    <button class="btn-stack q-add" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickAddMarket('${k}', ${idx})">${addLabel}</button>
-                    <button class="btn-clear btn-sq" style="margin: 0;" title="Clear Qty" onclick="clearMarketTier('${k}', ${idx})">✖</button>
-                    ${idx > 0 ? `<button class="btn-clear btn-sq" style="margin: 0; background:var(--border);" title="Remove Tier" onclick="removeMarketTier('${k}', ${idx})">➖</button>` : `<button class="btn-cart btn-sq" style="margin: 0;" title="Add Tier" onclick="addMarketTier('${k}')">➕</button>`}
-                </div>`;
+                let addRemoveBtn = idx > 0 ?
+                    `<button class="btn-clear btn-sq" style="margin: 0; padding: 0; font-size:14px;" title="Remove Tier" onclick="removeMarketTier('${k}', ${idx})">-</button>` :
+                    `<button class="btn-success btn-sq" style="margin: 0; padding: 0; font-size:14px;" title="Add Tier" onclick="addMarketTier('${k}')">+</button>`;
+
+                tiersHtml += `
+                    <div class="market-tier-row">
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 130px;">
+                            <span style="color:var(--text-dim); font-size:11px; font-weight:bold; white-space: nowrap;">↳ Order ${idx + 1}</span>
+                            <input type="number" style="width: 55px; margin: 0;" value="${tier.p}" title="Price" max="999" oninput="updateMarketTier('${k}', ${idx}, 'p', this.value)"> 
+                        </div>
+                        <div style="display:flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                            <button class="btn-stack q-sub" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickSubMarket('${k}', ${idx})">${subLabel}</button>
+                            <input type="number" style="width: 95px; margin: 0;" value="${tier.q}" title="Qty" oninput="updateMarketTier('${k}', ${idx}, 'q', this.value)">
+                            <button class="btn-stack q-add" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickAddMarket('${k}', ${idx})">${addLabel}</button>
+                            <button class="btn-cart btn-success" style="margin: 0; padding: 0 8px;" title="Auto-Fill Missing" onclick="autoFillMarketItem('${k}')">Fill</button>
+                            <button class="btn-clear" style="margin: 0; padding: 0 8px;" title="Clear Qty" onclick="clearMarketTier('${k}', ${idx})">Clear</button>
+                            ${addRemoveBtn}
+                        </div>
+                    </div>`;
             });
 
             let itemName = (t.items && t.items[k]) ? t.items[k] : (k.charAt(0).toUpperCase() + k.slice(1));
-            html += `<div class="market-row" id="row_m_${k}" style="display:none;">
-                <div style="font-weight:bold; color:var(--accent);">${itemName}</div>
-                <div style="text-align:center;">${priceHtml}</div>
-                <div style="text-align:center;">${buyHtml}</div>
-                <div style="text-align:right;"><span class="mobile-label">${t.tblCost || 'Cost'}</span><span style="font-weight:bold; color:var(--accent); font-size: 1.1em;" id="cost_${k}">0.00</span></div>
-                <div style="text-align:right;"><span class="mobile-label">${t.tblStash || 'Stash'}</span><span style="color:var(--text-dim);" id="stash_${k}">0</span></div>
+
+            html += `<div class="market-card" id="row_m_${k}" style="display:none;">
+                <div class="market-card-header">
+                    <div style="font-weight:bold; color:var(--accent); font-size: 1.1em;">${itemName}</div>
+                    <div style="display: flex; gap: 15px; text-align: right;">
+                        <div><span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">${t.tblCost || 'Cost'}</span> <br><span style="font-weight:bold; color:var(--accent); font-size: 1.1em;" id="cost_${k}">0.00</span></div>
+                        <div><span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">${t.tblStash || 'Stash'}</span> <br><span style="color:var(--text-dim);" id="stash_${k}">0</span></div>
+                    </div>
+                </div>
+                <div>${tiersHtml}</div>
             </div>`;
         });
         html += `</div>`;
     });
-    
+
     html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);"><div style="font-weight:bold; text-transform:uppercase; color:var(--text-dim);">${t.cartTotal || 'Total'}</div><div id="cartTotalGold" style="font-weight:bold; color:var(--accent); font-size:1.3em;">0.00 g</div></div>`;
     container.innerHTML = html;
-    
-    if(document.getElementById('targetMetal')) {
+
+    if (document.getElementById('targetMetal')) {
         updateVisibility(document.getElementById('targetMetal').value);
     }
 }
 
 function renderBankTable() {
     const container = document.getElementById('bankContainer');
-    if(!container) return;
+    if (!container) return;
     const t = i18n[currentLang] || i18n['en'];
     const addLabel = document.getElementById('mode').value === 'stacks' ? (t.qAddStk || '+1 Stk') : (t.qAdd || '+10k');
     const subLabel = document.getElementById('mode').value === 'stacks' ? (t.qSubStk || '-1 Stk') : (t.qSub || '-10k');
-    
-    let html = ""; 
+
+    let html = "";
     CATEGORIES.forEach(cat => {
         html += `<div id="b_cat_${cat.id}" style="display:none;"><div class="bank-category" style="margin-top:10px; margin-bottom:5px;">${(t.categories && t.categories[cat.id]) ? t.categories[cat.id] : cat.id}</div>`;
-        
+
         cat.items.forEach(k => {
-            const val = Number(document.getElementById('b_'+k)?.value) || 0;
+            const val = Number(document.getElementById('b_' + k)?.value) || 0;
             let itemName = (t.items && t.items[k]) ? t.items[k] : (k.charAt(0).toUpperCase() + k.slice(1));
-            
+
             html += `<div class="bank-row" id="row_b_${k}" style="display:none;">
                 <div style="font-weight:bold; color:var(--accent);">${itemName}</div>
                 <div style="text-align:right;">
@@ -148,7 +174,7 @@ function renderBankTable() {
                         <button class="btn-stack q-sub" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickSub('b_${k}')">${subLabel}</button>
                         <input type="number" id="b_${k}" value="${val}" oninput="handlePipelineChange()" style="width: 95px; margin: 0;">
                         <button class="btn-stack q-add" style="margin: 0; min-width:30px; padding:0 4px;" onclick="quickAdd('b_${k}')">${addLabel}</button>
-                        <button class="btn-clear btn-sq" style="margin: 0;" title="Clear Qty" onclick="clearItem('b_${k}')">✖</button>
+                        <button class="btn-clear" style="margin: 0; padding: 0 8px;" title="Clear Qty" onclick="clearItem('b_${k}')">Clear</button>
                     </div>
                 </div>
             </div>`;
@@ -162,7 +188,7 @@ function updateVisibility(targetMetal) {
     const relevant = getRelevantItems(targetMetal);
     const showAllBank = document.getElementById('showAllBank')?.checked;
     const showAllCart = document.getElementById('showAllCart')?.checked;
-    
+
     const searchBank = (document.getElementById('searchBank')?.value || "").toLowerCase();
     const searchCart = (document.getElementById('searchCart')?.value || "").toLowerCase();
     const t = i18n[currentLang] || i18n['en'];

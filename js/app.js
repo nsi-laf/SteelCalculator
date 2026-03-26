@@ -38,7 +38,13 @@ function targetMetalChanged() {
 
 function run() { clearTimeout(timer); timer = setTimeout(calculate, 150); }
 
-// NEW: Calculate the maximum amount you can craft using strictly your bank inventory
+function switchHelpTab(tab) {
+    document.getElementById('tabBtn_help').classList.toggle('active', tab === 'help');
+    document.getElementById('tabBtn_legend').classList.toggle('active', tab === 'legend');
+    document.getElementById('tab_help').style.display = tab === 'help' ? 'block' : 'none';
+    document.getElementById('tab_legend').style.display = tab === 'legend' ? 'block' : 'none';
+}
+
 function calculateMax() {
     const t = i18n[currentLang] || i18n['en'];
     const targetMetal = document.getElementById('targetMetal').value;
@@ -61,25 +67,20 @@ function calculateMax() {
         bank[k] = (Number(document.getElementById('b_' + k)?.value) || 0) * mult;
     });
 
-    // Determine what is currently missing for the desired target
     let origTree = resolveTree(targetMetal, targetUnits, bank, mR);
     let origExts = resolveExtractions(origTree.deficits, mE, mM, bank);
-    let origMissing = origExts.raw;
 
-    let missingList = [];
-    Object.keys(origMissing).forEach(k => {
-        if (origMissing[k] > 0) {
-            let itemName = (t.items && t.items[k]) ? t.items[k] : (k.charAt(0).toUpperCase() + k.slice(1));
-            let amt = mode === 'stacks' ? (origMissing[k] / 10000).toFixed(2) + " Stk" : origMissing[k].toLocaleString();
-            missingList.push(`- ${itemName}: ${amt}`);
-        }
-    });
+    let origMissing = { ...origExts.raw };
+    if (origTree.deficits) {
+        Object.keys(origTree.deficits).forEach(k => {
+            origMissing[k] = (origMissing[k] || 0) + origTree.deficits[k];
+        });
+    }
 
     let low = 0;
     let high = 10000000;
     let best = 0;
 
-    // Binary search for maximum possible yield before encountering a deficit
     while (low <= high) {
         let mid = Math.floor((low + high) / 2);
         let tree = resolveTree(targetMetal, mid, bank, mR);
@@ -89,26 +90,59 @@ function calculateMax() {
 
         if (!hasDeficit) {
             best = mid;
-            low = mid + 1; // Try to see if we can craft more
+            low = mid + 1;
         } else {
-            high = mid - 1; // We can't craft this much, try less
+            high = mid - 1;
         }
     }
 
     let targetName = (t.items && t.items[targetMetal]) ? t.items[targetMetal] : targetMetal;
     let fmtOrig = mode === 'stacks' ? originalTarget + " Stk" : originalTarget.toLocaleString();
+    let bestFmt = mode === 'stacks' ? (best / 10000).toFixed(4) : best.toLocaleString();
+
+    let bodyHtml = '';
+
+    if (best > 0) {
+        bodyHtml += `<p style="color:var(--text-dim); margin-top:0;">You have enough materials to craft <strong style="color:var(--accent); font-size:1.1em;">${bestFmt} ${targetName}</strong>.</p>`;
+    } else {
+        bodyHtml += `<p style="color:var(--danger); font-weight:bold; margin-top:0;">Cannot craft any ${targetName} with your current bank.</p>`;
+    }
+
+    let hasMissing = Object.values(origMissing).some(v => v > 0);
+
+    if (best < targetUnits && hasMissing) {
+        bodyHtml += `<p style="margin-bottom: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">To reach your original target of <strong>${fmtOrig} ${targetName}</strong>, you are still missing:</p>`;
+
+        CATEGORIES.forEach(cat => {
+            let catItems = [];
+            cat.items.forEach(k => {
+                if (origMissing[k] > 0) {
+                    let itemName = (t.items && t.items[k]) ? t.items[k] : (k.charAt(0).toUpperCase() + k.slice(1));
+                    let amt = mode === 'stacks' ? (origMissing[k] / 10000).toFixed(2) + " Stk" : origMissing[k].toLocaleString();
+                    catItems.push(`
+                        <div style="display:flex; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.1); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 4px;">
+                            <span>${itemName}</span>
+                            <span style="color:var(--danger); font-weight:bold;">${amt}</span>
+                        </div>
+                    `);
+                }
+            });
+            if (catItems.length > 0) {
+                let catName = (t.categories && t.categories[cat.id]) ? t.categories[cat.id] : cat.id;
+                bodyHtml += `<div class="bank-category" style="margin-top:10px; margin-bottom:5px;">${catName}</div>` + catItems.join('');
+            }
+        });
+    } else if (best >= targetUnits) {
+        bodyHtml += `<p style="color:var(--success); font-weight:bold; margin-top: 15px;">You have everything you need to meet your goal!</p>`;
+    }
+
+    document.getElementById('maxCraftBody').innerHTML = bodyHtml;
+    closeModal('bankModal');
+    openModal('maxCraftModal');
 
     if (best > 0) {
         document.getElementById('targetAmount').value = mode === 'stacks' ? (best / 10000).toFixed(4) : best;
         handlePipelineChange();
-
-        if (best < targetUnits && missingList.length > 0) {
-            alert(`Max craftable limit calculated!\n\nYou can only make ${mode === 'stacks' ? (best / 10000).toFixed(4) : best.toLocaleString()} ${targetName}.\n\nTo make your original target of ${fmtOrig}, you are missing:\n${missingList.join('\n')}`);
-        } else {
-            if (typeof showToast === 'function') showToast("Max craftable limit calculated! You have enough to meet or exceed your target.");
-        }
-    } else {
-        alert(`Cannot craft any ${targetName} with your current bank.\n\nTo make your desired target of ${fmtOrig}, you are missing:\n${missingList.join('\n')}`);
     }
 }
 
@@ -179,7 +213,13 @@ function calculate() {
 
     const baseTree = resolveTree(targetMetal, targetRaw * mult, bank, mR);
     const baseExtractions = resolveExtractions(baseTree.deficits, mE, mM, bank);
-    pureDeficits = baseExtractions.raw;
+
+    pureDeficits = { ...baseExtractions.raw };
+    if (baseTree.deficits) {
+        Object.keys(baseTree.deficits).forEach(k => {
+            pureDeficits[k] = (pureDeficits[k] || 0) + baseTree.deficits[k];
+        });
+    }
 
     const virtualBank = {};
     Object.keys(bank).forEach(k => virtualBank[k] = bank[k] + purchased[k]);
@@ -187,7 +227,20 @@ function calculate() {
     const actualTree = resolveTree(targetMetal, targetRaw * mult, virtualBank, mR);
     const actualExtractions = resolveExtractions(actualTree.deficits, mE, mM, virtualBank);
 
-    const finalDeficits = actualExtractions.raw;
+    const finalDeficits = { ...actualExtractions.raw };
+    if (actualTree.deficits) {
+        Object.keys(actualTree.deficits).forEach(k => {
+            finalDeficits[k] = (finalDeficits[k] || 0) + actualTree.deficits[k];
+        });
+    }
+
+    const baseGross = { ...(baseExtractions.grossRaw || baseExtractions.raw) };
+    if (baseTree.deficits) {
+        Object.keys(baseTree.deficits).forEach(k => {
+            baseGross[k] = (baseGross[k] || 0) + baseTree.deficits[k];
+        });
+    }
+
     byproductsRaw = actualExtractions.bp;
 
     let gHTML = '';
@@ -200,7 +253,7 @@ function calculate() {
                 totalGatherUnits += finalDeficits[k];
                 const fmtVal = mode === 'stacks' ? (finalDeficits[k] / 10000).toFixed(2) + " Stk" : finalDeficits[k].toLocaleString();
 
-                let totalNeeded = baseExtractions.grossRaw[k] || finalDeficits[k];
+                let totalNeeded = baseGross[k] || finalDeficits[k];
                 let amountAcquired = totalNeeded - finalDeficits[k];
                 let progressPct = totalNeeded > 0 ? Math.min(100, Math.max(0, (amountAcquired / totalNeeded) * 100)) : 0;
 
@@ -230,7 +283,7 @@ function calculate() {
     let outputHTML = pipelineStepsRaw.map((stepObj, index) => {
         let isCompleted = completedSteps.includes(index);
         let completedClass = isCompleted ? 'completed' : '';
-        let checkIcon = isCompleted ? '✅' : '⬜';
+        let checkIcon = isCompleted ? '[X]' : '[ ]';
 
         let modAction = stepObj.htmlAction.replace(/<span class="highlight">([\d,]+)/g, (match, p1) => {
             let num = parseInt(p1.replace(/,/g, ''));
@@ -250,21 +303,28 @@ function calculate() {
         let routeHtml = '';
         if (stepObj.routeStats && stepObj.routeStats.length > 1) {
             let btns = stepObj.routeStats.map(rs => {
-                let isActive = rs.name === stepObj.selectedRoute ? 'active' : '';
-                let badges = '';
-                if (rs.isBestYield) badges += `<span title="${t.tooltipBestYield || 'Most Efficient'}" style="margin-left:4px; font-size:11px;">⭐</span>`;
-                if (rs.isMaxYield) badges += `<span title="${t.tooltipMaxYield || 'Max Byproducts Generated'}" style="margin-left:4px; font-size:11px;">💎</span>`;
-                if (rs.isRegionLocked) badges += `<span title="${t.tooltipRegionLocked || 'Region Locked Machine'}" style="margin-left:4px; font-size:11px;">🌍</span>`;
+                let classes = ['btn-route'];
+                let textBadges = [];
+
+                if (rs.name === stepObj.selectedRoute) classes.push('active');
+                if (rs.isBestYield) { classes.push('rt-eff'); textBadges.push('[E]'); }
+                if (rs.isMaxYield) { classes.push('rt-max'); textBadges.push('[Y]'); }
+                if (rs.isRegionLocked) { classes.push('rt-reg'); textBadges.push('[R]'); }
+
+                // Add the badges neatly with a space joining them if there are multiple.
+                let badgeHtml = textBadges.length > 0 ? ` <span style="font-size:10px; opacity:0.8; margin-left: 4px;">${textBadges.join(' ')}</span>` : '';
+
                 let safeStepKey = stepObj.stepKey.replace(/'/g, "\\'");
                 let safeRouteName = rs.name.replace(/'/g, "\\'");
-                return `<button class="btn-route ${isActive}" onclick="updatePathChoice(event, '${safeStepKey}', '${safeRouteName}')">${rs.name}${badges}</button>`;
+
+                return `<button class="${classes.join(' ')}" onclick="updatePathChoice(event, '${safeStepKey}', '${safeRouteName}')">${rs.name}${badgeHtml}</button>`;
             }).join('');
             routeHtml = `<div class="route-choices">${btns}</div>`;
         }
 
         return `<div class="step-card ${completedClass}" id="step_${index}" onclick="toggleStep(${index})">
             <div>
-                <span style="cursor:pointer; margin-right:8px; font-size: 1.1em;">${checkIcon}</span>
+                <span style="cursor:pointer; margin-right:8px; font-size: 1.1em; font-weight: bold;">${checkIcon}</span>
                 <span style="color:var(--text-dim); font-weight:bold; margin-right:5px;">${t.stepPrefix || 'Step'} ${index + 1}.</span>${modAction}${perCr}
             </div>
             
@@ -291,7 +351,6 @@ function calculate() {
     const chkBp = document.getElementById('chkBp');
     if (byproductsString !== "") {
         document.getElementById('row_chkBp').style.display = 'flex';
-        // Always populate innerHTML regardless of check state so it's ready when clicked
         document.getElementById('bpOutput').innerHTML = byproductsString;
 
         if (chkBp && chkBp.checked) {

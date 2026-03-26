@@ -17,17 +17,17 @@ function save() {
     const isLight = document.body.classList.contains('light-theme');
     const themeKey = isLight ? 'light' : 'dark';
     const themeDef = isLight ? defaultColors.light : defaultColors.dark;
-    
+
     const cAccent = document.getElementById('colorAccent')?.value || themeDef.accent;
     const cBg = document.getElementById('colorBg')?.value || themeDef.bg;
     const cText = document.getElementById('colorText')?.value || themeDef.text;
 
-    const colorsChanged = cAccent.toLowerCase() !== themeDef.accent.toLowerCase() || 
-                          cBg.toLowerCase() !== themeDef.bg.toLowerCase() || 
-                          cText.toLowerCase() !== themeDef.text.toLowerCase();
+    const colorsChanged = cAccent.toLowerCase() !== themeDef.accent.toLowerCase() ||
+        cBg.toLowerCase() !== themeDef.bg.toLowerCase() ||
+        cText.toLowerCase() !== themeDef.text.toLowerCase();
 
     let existingData = {};
-    try { existingData = JSON.parse(localStorage.getItem('qm_data') || '{}'); } catch(e) {}
+    try { existingData = JSON.parse(localStorage.getItem('qm_data') || '{}'); } catch (e) { }
 
     let customColors = existingData.customColors || {};
     if (colorsChanged) {
@@ -56,7 +56,7 @@ function save() {
         webhook: document.getElementById('webhookUrl')?.value || '',
         customColors: customColors
     };
-    
+
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         let el = document.getElementById('b_' + k);
         if (el) data.bank[k] = el.value;
@@ -64,7 +64,7 @@ function save() {
 
     localStorage.setItem('qm_data', JSON.stringify(data));
     const status = document.getElementById('saveStatus');
-    if(status) {
+    if (status) {
         status.innerText = "Saved";
         setTimeout(() => status.innerText = "Ready", 2000);
     }
@@ -74,30 +74,30 @@ function load() {
     try {
         const raw = localStorage.getItem('qm_data');
         let isLight = false;
-        
+
         if (!raw) {
             if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
                 isLight = true;
             }
         } else {
             const data = JSON.parse(raw);
-            
+
             if (data.lang) currentLang = data.lang;
             if (data.market) marketData = data.market;
             if (data.choices) userPathChoices = data.choices;
             if (data.collapsed) collapsedState = data.collapsed;
             if (data.visibility) moduleVisibility = data.visibility;
             if (data.webhook && document.getElementById('webhookUrl')) document.getElementById('webhookUrl').value = data.webhook;
-            
+
             if (data.mode) {
                 document.getElementById('mode').value = data.mode;
                 prevMode = data.mode;
             }
-            
+
             if (data.metal) document.getElementById('targetMetal').value = data.metal;
             if (data.target) document.getElementById('targetAmount').value = data.target;
             if (data.crafters) document.getElementById('crafters').value = data.crafters;
-            
+
             if (data.mods) {
                 document.getElementById('modMast').checked = data.mods.mast;
                 document.getElementById('modRef').checked = data.mods.ref;
@@ -128,7 +128,7 @@ function load() {
                 toggleMainModule(id, moduleVisibility[id]);
             });
         }
-        
+
         if (isLight) document.body.classList.add('light-theme');
         syncColorPickers();
         if (typeof updateThemeIcon === 'function') updateThemeIcon();
@@ -141,45 +141,50 @@ function load() {
 function clearAll() {
     const t = i18n[currentLang] || i18n['en'];
     if (!confirm(t.resetPrompt || "Reset all inventory values and shopping cart to zero?")) return;
-    
+
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         let el = document.getElementById('b_' + k);
         if (el) el.value = 0;
-        
+
         let p = defaultPrices[k];
         if (!p) p = (k === 'tephra') ? 40 : 15;
         marketData[k] = [{ p: p, q: 0 }];
     });
-    
+
     document.getElementById('targetAmount').value = 10000;
     userPathChoices = {};
     completedSteps = [];
-    
+
     renderBankTable();
     renderMarketTable();
     targetMetalChanged();
 }
 
-function generateShareCode() {
-    const t = i18n[currentLang] || i18n['en'];
+// Extracted reusable helper function to generate the string silently
+function createShareCodeString() {
     const data = {
         m: document.getElementById('targetMetal').value,
         t: document.getElementById('targetAmount').value,
         b: {},
         mk: {}
     };
-    
+
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         const bVal = Number(document.getElementById('b_' + k)?.value) || 0;
         if (bVal > 0) data.b[k] = bVal;
-        
+
         if (marketData[k]) {
             let activeTiers = marketData[k].filter(tier => tier.q > 0);
             if (activeTiers.length > 0) data.mk[k] = activeTiers;
         }
     });
 
-    const str = btoa(JSON.stringify(data));
+    return btoa(JSON.stringify(data));
+}
+
+function generateShareCode() {
+    const t = i18n[currentLang] || i18n['en'];
+    const str = createShareCodeString();
     document.getElementById('shareCode').value = str;
     navigator.clipboard.writeText(str);
     showToast(t.exportSuccess || "Copied!");
@@ -190,16 +195,16 @@ function loadShareCode() {
     try {
         const str = document.getElementById('shareCode').value;
         if (!str) return;
-        
+
         const data = JSON.parse(atob(str));
-        
+
         if (data.m) document.getElementById('targetMetal').value = data.m;
         if (data.t) document.getElementById('targetAmount').value = data.t;
-        
+
         Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
             let el = document.getElementById('b_' + k);
             if (el) el.value = data.b[k] || 0;
-            
+
             if (data.mk && data.mk[k]) {
                 marketData[k] = data.mk[k];
             } else {
@@ -207,7 +212,7 @@ function loadShareCode() {
                 marketData[k] = [{ p: p, q: 0 }];
             }
         });
-        
+
         renderBankTable();
         renderMarketTable();
         targetMetalChanged();

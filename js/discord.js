@@ -4,13 +4,13 @@ function buildDiscordMessage() {
     const targetVal = document.getElementById('targetAmount').value;
     const targetMetal = document.getElementById('targetMetal').value;
     const relevant = getRelevantItems(targetMetal);
-    
+
     const targetName = (t.items && t.items[targetMetal]) ? t.items[targetMetal] : targetMetal;
     let msg = `**${t.discHeader || 'LOGISTICS ORDER'}: ${targetName.toUpperCase()}**\n*Targeting ${targetVal} ${mode === 'stacks' ? 'Stacks' : 'Units'} of ${targetName}*\n\n`;
-    
+
     let bankString = "";
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
-        let bankRaw = Number(document.getElementById('b_'+k)?.value) || 0;
+        let bankRaw = Number(document.getElementById('b_' + k)?.value) || 0;
         if (bankRaw > 0 && relevant.has(k)) {
             let fmtAmt = mode === 'stacks' ? bankRaw.toFixed(2) + " Stacks" : bankRaw.toLocaleString();
             let itemName = (t.items && t.items[k]) ? t.items[k] : k;
@@ -22,7 +22,7 @@ function buildDiscordMessage() {
     let marketString = ""; let hasMarket = false; let totalGold = 0;
     Object.values(CATEGORIES).flatMap(c => c.items).forEach(k => {
         let totalQty = 0;
-        if(marketData[k]) {
+        if (marketData[k]) {
             marketData[k].forEach(tier => {
                 totalQty += tier.q;
                 totalGold += (tier.q / (mode === 'stacks' ? 1 : 10000)) * tier.p;
@@ -35,24 +35,37 @@ function buildDiscordMessage() {
             hasMarket = true;
         }
     });
-    
+
     if (hasMarket) {
         msg += `**${t.discMarket || 'MARKET PURCHASES:'}**\n\`\`\`\n${marketString}\`\`\`\n*Total Estimated Gold Cost: ${totalGold.toFixed(2)} g*\n\n`;
     }
 
+    // UPDATED: Missing components categorized and numbered
     let gatherString = ""; let hasGather = false;
-    Object.keys(pureDeficits).forEach(k => {
-        if (pureDeficits[k] > 0) {
-            let fmtAmt = mode === 'stacks' ? (pureDeficits[k]/10000).toFixed(2) + " Stacks" : pureDeficits[k].toLocaleString();
-            let itemName = (t.items && t.items[k]) ? t.items[k] : k;
-            gatherString += `- ${itemName}: ${fmtAmt}\n`;
-            hasGather = true;
+    CATEGORIES.forEach(cat => {
+        let catItems = [];
+        cat.items.forEach(k => {
+            if (pureDeficits[k] > 0) {
+                let fmtAmt = mode === 'stacks' ? (pureDeficits[k] / 10000).toFixed(2) + " Stacks" : pureDeficits[k].toLocaleString();
+                let itemName = (t.items && t.items[k]) ? t.items[k] : k;
+                catItems.push(`${itemName}: ${fmtAmt}`);
+                hasGather = true;
+            }
+        });
+
+        if (catItems.length > 0) {
+            let catName = (t.categories && t.categories[cat.id]) ? t.categories[cat.id] : cat.id.toUpperCase();
+            gatherString += `# ${catName}\n`;
+            catItems.forEach((itemStr, idx) => {
+                gatherString += `${idx + 1}. ${itemStr}\n`;
+            });
+            gatherString += `\n`;
         }
     });
 
-    const reqLabel = t.discReq || "MANUAL GATHER REQUIRED:";
-    if (hasGather) msg += `**${reqLabel}**\n\`\`\`diff\n- ${gatherString.replace(/\n/g, '\n- ')}\`\`\`\n`;
-    else msg += `**${reqLabel}**\n\`\`\`yaml\n${t.discStock || 'All gathering covered.'}\`\`\`\n`;
+    const reqLabel = "MISSING COMPONENTS";
+    if (hasGather) msg += `**${reqLabel}**\n\`\`\`md\n${gatherString.trim()}\`\`\`\n\n`;
+    else msg += `**${reqLabel}**\n\`\`\`yaml\n${t.discStock || 'All gathering covered.'}\`\`\`\n\n`;
 
     if (pipelineStepsRaw.length > 0) {
         msg += `**MANUFACTURING PIPELINE**\n\`\`\`md\n`;
@@ -63,35 +76,45 @@ function buildDiscordMessage() {
         });
         msg += `\`\`\`\n`;
     }
-    
+
+    // UPDATED: Numbered Byproducts
     let hasByproducts = false;
     const bpLabel = t.byproductsTitle || "TOTAL RECOVERED BYPRODUCTS";
-    let bpString = `**${bpLabel}**\n\`\`\`\n`;
+    let bpString = `**${bpLabel}**\n\`\`\`md\n`;
+    let bpCount = 1;
+
     Object.keys(byproductsRaw).forEach(k => {
         if (byproductsRaw[k] > 0) {
-            let fmtAmt = mode === 'stacks' ? (byproductsRaw[k]/10000).toFixed(2) + " Stacks" : byproductsRaw[k].toLocaleString();
+            let fmtAmt = mode === 'stacks' ? (byproductsRaw[k] / 10000).toFixed(2) + " Stacks" : byproductsRaw[k].toLocaleString();
             let itemName = (t.items && t.items[k]) ? t.items[k] : k;
-            bpString += `- ${itemName}: ${fmtAmt}\n`;
+            bpString += `${bpCount}. ${itemName}: ${fmtAmt}\n`;
+            bpCount++;
             hasByproducts = true;
         }
     });
-    if (hasByproducts) msg += bpString + `\`\`\``;
+
+    if (hasByproducts) msg += bpString + `\`\`\`\n`;
+
+    // Inject the generated Share Code into the Discord Message
+    const shareCode = createShareCodeString();
+    msg += `**LOAD ORDER DATA CODE:**\n\`${shareCode}\`\n`;
+
     return msg;
 }
 
-function copyDiscord() { 
+function copyDiscord() {
     const t = i18n[currentLang] || i18n['en'];
-    navigator.clipboard.writeText(buildDiscordMessage()); 
-    alert(t.discCopied || "Copied to clipboard!"); 
+    navigator.clipboard.writeText(buildDiscordMessage());
+    alert(t.discCopied || "Copied to clipboard!");
 }
 
 async function sendToDiscord() {
     const t = i18n[currentLang] || i18n['en'];
     const webhookUrl = document.getElementById('webhookUrl').value;
-    if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) { 
-        alert(t.errWebhook || "Invalid Webhook URL"); 
-        openModal('settingsModal'); 
-        return; 
+    if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+        alert(t.errWebhook || "Invalid Webhook URL");
+        openModal('settingsModal');
+        return;
     }
 
     const msg = buildDiscordMessage();
