@@ -537,13 +537,14 @@ input, select {
     background: var(--bg-input);
     border: 1px solid var(--border);
     color: var(--accent);
-    padding: 0 6px;
+    padding: 4px 8px;
     border-radius: 2px;
     text-align: center;
-    height: 28px;
+    height: 36px;
     font-family: inherit;
     vertical-align: middle;
     margin: 0;
+    line-height: 1.2;
 }
 
     input[type="color"] {

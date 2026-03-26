@@ -76,29 +76,34 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Ensures both select boxes are perfectly synced
 function setLang(code) {
-    document.getElementById('lang').value = code;
+    if (document.getElementById('lang')) document.getElementById('lang').value = code;
+    if (document.getElementById('sidebarLang')) document.getElementById('sidebarLang').value = code;
     changeLang();
     save();
 }
 
 function changeLang() {
     currentLang = document.getElementById('lang').value;
+
+    // Sync sidebar dropdown
+    if (document.getElementById('sidebarLang')) document.getElementById('sidebarLang').value = currentLang;
+
     const t = i18n[currentLang] || i18n['en'];
 
-    document.getElementById('flag_en').classList.toggle('active', currentLang === 'en');
-    document.getElementById('flag_fr').classList.toggle('active', currentLang === 'fr');
-
-    // Toggle Hardcoded Help Docs
-    if (document.getElementById('help-en')) document.getElementById('help-en').style.display = currentLang === 'en' ? 'block' : 'none';
-    if (document.getElementById('help-fr')) document.getElementById('help-fr').style.display = currentLang === 'fr' ? 'block' : 'none';
+    // Inject Dynamic Help Content
+    const helpContainer = document.getElementById('dynamicHelpContent');
+    if (helpContainer && t.helpHtml) {
+        helpContainer.innerHTML = t.helpHtml;
+    }
 
     const standardElements = [
         'tabPrefs', 'tabData', 'tabHelp', 'tabView', 'resetDesc', 'format',
         'optUnits', 'optStacks', 'targetMetalLabel', 'target', 'crafters',
         'yieldMods', 'mastery', 'refining', 'extraction', 'btnDiscord', 'btnSend',
         'invBank', 'invBankTitle', 'showAllBank', 'btnReset', 'defGather', 'mfgPipe', 'marketCart', 'marketCartTitle', 'showAllCart', 'btnAutoFill',
-        'shareTitle', 'shareDesc', 'btnGenCode', 'btnLoadCode', 'helpFeatures', 'helpHowTo',
+        'shareTitle', 'shareDesc', 'btnGenCode', 'btnLoadCode',
         'colorAccent', 'colorBg', 'colorText', 'btnResetColors', 'viewProd',
         'viewGather', 'viewPipe', 'legCP', 'legSP',
         'legBO', 'legPI', 'legGS', 'legStk', 'btnBank', 'btnCart',
@@ -109,19 +114,9 @@ function changeLang() {
         'legAcronyms', 'legEff', 'legYld', 'legReg'
     ];
 
-    const htmlElements = [
-        'helpSubtitle', 'helpFeat1', 'helpFeat3', 'helpFeat4', 'helpFeat5',
-        'helpHow1', 'helpHow2', 'helpHow3', 'helpHow4'
-    ];
-
     standardElements.forEach(id => {
         let el = document.getElementById('ui_' + id);
         if (el) el.innerText = t[id] || i18n.en[id];
-    });
-
-    htmlElements.forEach(id => {
-        let el = document.getElementById('ui_' + id);
-        if (el) el.innerHTML = t[id] || i18n.en[id];
     });
 
     document.querySelectorAll('.tooltip-maxcraft').forEach(el => el.title = t.tooltipMaxCraft || "Calculate how much you can make with just your inventory");
