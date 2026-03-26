@@ -36,27 +36,6 @@
                 </label>
                 <span class="theme-label">LM</span>
             </div>
-
-            <div style="width: 100%; margin-top: 15px;">
-                <select id="sidebarLang" onchange="setLang(this.value)" style="width: 100%; max-width: none; border-radius: 4px; padding: 6px;">
-                    <option value="en">English</option>
-                    <option value="fr">Français</option>
-                    <option value="ar">العربية (Arabic)</option>
-                    <option value="cs">Čeština (Czech)</option>
-                    <option value="de">Deutsch</option>
-                    <option value="es">Español</option>
-                    <option value="fi">Suomi (Finnish)</option>
-                    <option value="hu">Magyar (Hungarian)</option>
-                    <option value="it">Italiano</option>
-                    <option value="pl">Polski</option>
-                    <option value="pt">Português</option>
-                    <option value="ro">Română</option>
-                    <option value="ru">Русский (Russian)</option>
-                    <option value="sv">Svenska</option>
-                    <option value="tr">Türkçe</option>
-                    <option value="uk">Українська (Ukrainian)</option>
-                </select>
-            </div>
         </div>
     </div>
 
@@ -206,22 +185,22 @@
                     <div class="input-row">
                         <label id="ui_viewLang">Language</label>
                         <select id="lang" onchange="setLang(this.value)" style="width: 100%; max-width: 180px;">
-                            <option value="en">English</option>
-                            <option value="fr">Français</option>
-                            <option value="ar">العربية (Arabic)</option>
                             <option value="cs">Čeština (Czech)</option>
                             <option value="de">Deutsch</option>
+                            <option value="en" selected>English</option>
                             <option value="es">Español</option>
-                            <option value="fi">Suomi (Finnish)</option>
-                            <option value="hu">Magyar (Hungarian)</option>
+                            <option value="fr">Français</option>
                             <option value="it">Italiano</option>
+                            <option value="hu">Magyar (Hungarian)</option>
                             <option value="pl">Polski</option>
                             <option value="pt">Português</option>
                             <option value="ro">Română</option>
-                            <option value="ru">Русский (Russian)</option>
+                            <option value="fi">Suomi (Finnish)</option>
                             <option value="sv">Svenska</option>
                             <option value="tr">Türkçe</option>
+                            <option value="ru">Русский (Russian)</option>
                             <option value="uk">Українська (Ukrainian)</option>
+                            <option value="ar">العربية (Arabic)</option>
                         </select>
                     </div>
                     <div class="input-row">
@@ -332,22 +311,23 @@
                 </div>
             </div>
 
-            <div class="module-actions" style="padding: 10px 15px; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                <div style="display:flex; gap: 12px; align-items:center; font-size:10px; font-weight:bold; text-transform: uppercase;">
-                    <span><span class="acronym-box acronym-eff" style="margin-right:4px;">E</span> <span id="ui_lblEfficient">Efficient</span></span>
-                    <span><span class="acronym-box acronym-max" style="margin-right:4px;">Y</span> <span id="ui_lblMaxYield">Max Yield</span></span>
-                    <span><span class="acronym-box acronym-reg" style="margin-right:4px;">R</span> <span id="ui_lblRegionLocked">Region Locked</span></span>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button class="btn-mini btn-danger" onclick="restartPipeline()"><span id="ui_btnPipeReset">Reset</span></button>
-                    <div class="view-toggles" style="display:flex; gap:8px;">
-                        <button class="btn-mini active" id="btnOverview" onclick="setPipelineView('overview')">Overview</button>
-                        <button class="btn-mini" id="btnFocus" onclick="setPipelineView('focus')">Focus</button>
+            <div class="module-body" style="position:relative;">
+
+                <div class="module-actions" style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display:flex; gap: 12px; align-items:center; font-size:10px; font-weight:bold; text-transform: uppercase;">
+                        <span><span class="acronym-box acronym-eff" style="margin-right:4px;">E</span> <span id="ui_lblEfficient">Efficient</span></span>
+                        <span><span class="acronym-box acronym-max" style="margin-right:4px;">Y</span> <span id="ui_lblMaxYield">Max Yield</span></span>
+                        <span><span class="acronym-box acronym-reg" style="margin-right:4px;">R</span> <span id="ui_lblRegionLocked">Region Locked</span></span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn-mini btn-danger" onclick="restartPipeline()"><span id="ui_btnPipeReset">Reset</span></button>
+                        <div class="view-toggles" style="display:flex; gap:8px;">
+                            <button class="btn-mini active" id="btnOverview" onclick="setPipelineView('overview')">Overview</button>
+                            <button class="btn-mini" id="btnFocus" onclick="setPipelineView('focus')">Focus</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="module-body" style="position:relative;">
                 <div id="focusNav" style="display:none; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border);">
                     <button class="btn-cart" onclick="navFocus(-1)" style="width:auto; padding: 0 12px;">Prev</button>
                     <span id="focusProgressText" style="font-weight:bold; font-size:12px; color:var(--accent);">Step 1 of X</span>

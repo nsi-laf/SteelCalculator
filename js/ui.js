@@ -76,20 +76,14 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Ensures both select boxes are perfectly synced
 function setLang(code) {
     if (document.getElementById('lang')) document.getElementById('lang').value = code;
-    if (document.getElementById('sidebarLang')) document.getElementById('sidebarLang').value = code;
     changeLang();
     save();
 }
 
 function changeLang() {
     currentLang = document.getElementById('lang').value;
-
-    // Sync sidebar dropdown
-    if (document.getElementById('sidebarLang')) document.getElementById('sidebarLang').value = currentLang;
-
     const t = i18n[currentLang] || i18n['en'];
 
     // Inject Dynamic Help Content
